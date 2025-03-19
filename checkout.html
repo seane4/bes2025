@@ -81,9 +81,8 @@
                       <form data-node-type="commerce-cart-form" style="display:none" class="w-commerce-commercecartform">
                         <script type="text/x-wf-template" id="wf-template-d0872620-da83-2e6a-1190-a6df4dad026e"></script>
                         <div class="w-commerce-commercecartlist" data-wf-collection="database.commerceOrder.userItems" data-wf-template-id="wf-template-d0872620-da83-2e6a-1190-a6df4dad026e">
-                          <div class="w-commerce-commercecheckoutorderitem cart-items-list">
-                            <!-- Keep all the cart item display but remove shirt size inputs and special instructions here -->
-                            <!-- ... existing cart items content ... -->
+                          <div class="w-commerce-commercecheckoutorderitem cart-items-list" id="cart-items-list">
+                            <!-- Cart items will be dynamically populated here, WITHOUT shirt size inputs and special instructions -->
                           </div>
                         </div>
                         <div class="w-commerce-commercecartfooter">
@@ -163,9 +162,8 @@
             </div>
             <fieldset class="w-commerce-commercecheckoutblockcontent block-content">
               <div role="list" class="w-commerce-commercecheckoutorderitemslist" data-wf-collection="database.commerceOrder.userItems" data-wf-template-id="wf-template-d0872620-da83-2e6a-1190-a6df4dad026e">
-                <div class="w-commerce-commercecheckoutorderitem cart-items-list">
-                  <!-- Keep all the cart item display but remove shirt size inputs and special instructions here -->
-                  <!-- ... existing cart items content ... -->
+                <div class="w-commerce-commercecheckoutorderitem cart-items-list" id="cart-items-list">
+                  <!-- Cart items will be dynamically populated here, WITHOUT shirt size inputs and special instructions -->
                 </div>
               </div>
             </fieldset>
@@ -309,10 +307,12 @@
                   </div>
                   
                   <!-- Add the billing checkbox here, after shipping address fields but before closing the block -->
-                  <label class="w-checkbox checkbox-field" style="margin-top: 15px; display: block;">
-                    <input type="checkbox" id="billing-same-as-shipping" name="billing-same-as-shipping" checked style="opacity:1; position:relative; margin-right: 5px;">
-                    <span class="checkbox-label w-form-label" for="billing-same-as-shipping">Billing address same as shipping</span>
-                  </label>
+                  <div style="margin-top: 20px; display: block;">
+                    <label style="display: flex; align-items: center;">
+                      <input type="checkbox" id="billing-same-as-shipping" name="billing-same-as-shipping" checked style="margin-right: 10px; width: auto;">
+                      <span>Billing address same as shipping</span>
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -634,17 +634,17 @@
               <div class="w-commerce-commercecheckoutrow">
                 <div class="w-commerce-commercecheckoutcolumn">
                   <label class="w-commerce-commercecheckoutlabel">Card Number</label>
-                  <div id="card-number-element" class="w-commerce-commercecheckoutcardnumber card-field" style="min-height: 40px;"></div>
+                  <div id="card-number-element" style="height: 40px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 4px; background-color: #fff;"></div>
                 </div>
               </div>
               <div class="w-commerce-commercecheckoutrow">
                 <div class="w-commerce-commercecheckoutcolumn">
                   <label class="w-commerce-commercecheckoutlabel">Expiration Date</label>
-                  <div id="card-expiry-element" class="w-commerce-commercecheckoutcardexpirationdate card-field" style="min-height: 40px;"></div>
+                  <div id="card-expiry-element" style="height: 40px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 4px; background-color: #fff;"></div>
                 </div>
                 <div class="w-commerce-commercecheckoutcolumn">
                   <label class="w-commerce-commercecheckoutlabel">Security Code</label>
-                  <div id="card-cvc-element" class="w-commerce-commercecheckoutcardsecuritycode card-field" style="min-height: 40px;"></div>
+                  <div id="card-cvc-element" style="height: 40px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 4px; background-color: #fff;"></div>
                 </div>
               </div>
             </fieldset>
@@ -723,5 +723,22 @@
       z-index: 1 !important;
     }
   </style>
+  <script>
+    // Handle the billing checkbox toggle
+    document.addEventListener('DOMContentLoaded', function() {
+      const billingCheckbox = document.getElementById('billing-same-as-shipping');
+      const billingAddressSection = document.querySelector('.w-commerce-commercecheckoutshippingaddresswrapper');
+      
+      if (billingCheckbox && billingAddressSection) {
+        // Initialize based on checkbox state
+        billingAddressSection.style.display = billingCheckbox.checked ? 'none' : 'block';
+        
+        // Add change event listener
+        billingCheckbox.addEventListener('change', function() {
+          billingAddressSection.style.display = this.checked ? 'none' : 'block';
+        });
+      }
+    });
+  </script>
 </body>
 </html>

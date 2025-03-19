@@ -117,7 +117,7 @@ function initializeStripeElements() {
 
 function setupCheckoutFormSubmission() {
   const checkoutButton = document.querySelector('.w-commerce-commercecheckoutplaceorderbutton');
-  const customerForm = document.querySelector('#customer-info-form');
+  const customerForm = document.querySelector('.w-commerce-commercecheckoutcustomerinfowrapper');
   
   if (checkoutButton) {
     checkoutButton.addEventListener('click', function(event) {
@@ -433,87 +433,76 @@ function calculateTax(cart) {
 }
 
 function validateCustomerForm() {
-  const customerForm = document.querySelector('#customer-info-form');
+  const customerForm = document.querySelector('.w-commerce-commercecheckoutcustomerinfowrapper');
   
-  if (!customerForm) return false;
-  
-  // Check browser form validation
-  if (!customerForm.checkValidity()) {
-    // Trigger the browser's built-in validation
-    const submitButton = document.createElement('button');
-    submitButton.type = 'submit';
-    submitButton.style.display = 'none';
-    customerForm.appendChild(submitButton);
-    submitButton.click();
-    customerForm.removeChild(submitButton);
-    
-    // Show a general error message
-    handlePaymentError('Please fill in all required fields marked with an asterisk (*).');
+  if (!customerForm) {
+    console.error('Customer form not found');
+    handlePaymentError('Form error: Could not find the customer information form.');
     return false;
   }
   
-  // Additional validation for specific fields
-  const email = customerForm.querySelector('[name="email"]').value;
-  const primaryName = customerForm.querySelector('[name="primary_name"]').value;
-  const phone = customerForm.querySelector('[name="primary_phone"]').value;
-  const shirtSize = customerForm.querySelector('[name="primary_shirt_size"]').value;
-  const address = customerForm.querySelector('[name="address_line1"]').value;
-  const city = customerForm.querySelector('[name="city"]').value;
-  const state = customerForm.querySelector('[name="state"]').value;
-  const zip = customerForm.querySelector('[name="zip"]').value;
-  const country = customerForm.querySelector('[name="country"]').value;
+  // Check required fields
+  const email = customerForm.querySelector('[name="email"]')?.value;
+  const primaryName = customerForm.querySelector('[name="primary_name"]')?.value;
+  const phone = customerForm.querySelector('[name="primary_phone"]')?.value;
+  const shirtSize = customerForm.querySelector('[name="primary_shirt_size"]')?.value;
+  const address = customerForm.querySelector('[name="address_line1"]')?.value;
+  const city = customerForm.querySelector('[name="city"]')?.value;
+  const state = customerForm.querySelector('[name="state"]')?.value;
+  const zip = customerForm.querySelector('[name="zip"]')?.value;
+  const country = customerForm.querySelector('[name="country"]')?.value;
+  
+  // Create an array to collect all error messages
+  let errors = [];
   
   // Validate email
   if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-    handlePaymentError('Please enter a valid email address.');
-    return false;
+    errors.push('Please enter a valid email address.');
   }
   
   // Validate name
   if (!primaryName || primaryName.trim().length < 3) {
-    handlePaymentError('Please enter your full name (first and last name).');
-    return false;
+    errors.push('Please enter your full name (first and last name).');
   }
   
   // Validate phone
   if (!phone || phone.replace(/[^0-9]/g, '').length < 10) {
-    handlePaymentError('Please enter a valid phone number with at least 10 digits.');
-    return false;
+    errors.push('Please enter a valid phone number with at least 10 digits.');
   }
   
   // Validate shirt size
   if (!shirtSize) {
-    handlePaymentError('Please select a shirt size.');
-    return false;
+    errors.push('Please select a shirt size.');
   }
   
   // Validate address
   if (!address || address.trim().length < 5) {
-    handlePaymentError('Please enter a valid street address.');
-    return false;
+    errors.push('Please enter a valid street address.');
   }
   
   // Validate city
   if (!city || city.trim().length < 2) {
-    handlePaymentError('Please enter a valid city.');
-    return false;
+    errors.push('Please enter a valid city.');
   }
   
   // Validate state
   if (!state || state.trim().length < 2) {
-    handlePaymentError('Please enter a valid state/province.');
-    return false;
+    errors.push('Please enter a valid state/province.');
   }
   
   // Validate ZIP
   if (!zip || zip.trim().length < 5) {
-    handlePaymentError('Please enter a valid ZIP/postal code.');
-    return false;
+    errors.push('Please enter a valid ZIP/postal code.');
   }
   
   // Validate country
   if (!country) {
-    handlePaymentError('Please select a country.');
+    errors.push('Please select a country.');
+  }
+  
+  // If there are errors, display them
+  if (errors.length > 0) {
+    handlePaymentError(errors.join('<br>'));
     return false;
   }
   
