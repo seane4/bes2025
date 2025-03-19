@@ -30,9 +30,11 @@ function initializeSupabase() {
 function initializeStripeElements() {
   console.log('Initializing Stripe elements...');
   
-  // Initialize Stripe with your publishable key
-  // Replace with your actual Stripe publishable key
-  stripe = Stripe('pk_test_51OxxlOKPl0Oc7cDJfhAVFnllgPBPizxYwMmhJPw7Uqu0iiC7ks12XcCEKm0J7KDGZGPOi8a2DKwDPzdN4yJrBGXL00lQ56I8Yn');
+  // Get Stripe publishable key from environment or use a default test key
+  const stripePublishableKey = window.STRIPE_PUBLISHABLE_KEY || 'pk_test_51OxxlOKPl0Oc7cDJfhAVFnllgPBPizxYwMmhJPw7Uqu0iiC7ks12XcCEKm0J7KDGZGPOi8a2DKwDPzdN4yJrBGXL00lQ56I8Yn';
+  
+  // Initialize Stripe with the publishable key
+  stripe = Stripe(stripePublishableKey);
   
   // Create Stripe elements
   elements = stripe.elements({
