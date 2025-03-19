@@ -1,0 +1,354 @@
+/* Checkout Page Styles for Banff Energy Summit 2025 */
+
+/* Checkout item styles */
+.checkout-item {
+  padding: 20px;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.checkout-item:last-child {
+  border-bottom: none;
+}
+
+.checkout-item-details {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.checkout-item-image {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.checkout-item-info {
+  flex: 1;
+}
+
+.checkout-item-info h4 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.checkout-item-info p {
+  margin: 5px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.checkout-remove-btn {
+  margin-top: 10px;
+  padding: 6px 12px;
+  background-color: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.checkout-remove-btn:hover {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+/* Hide Apple Pay and Quick Checkout buttons */
+.w-commerce-commercecartapplepaybutton,
+.w-commerce-commercecartquickcheckoutbutton {
+  display: none !important;
+}
+
+/* Ensure the checkout form is properly displayed */
+.w-commerce-commercecheckoutformcontainer {
+  display: block;
+  width: 100%;
+}
+
+.w-commerce-commercelayoutcontainer {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.w-commerce-commercelayoutmain {
+  display: block !important;
+  width: 60% !important;
+  padding-right: 20px;
+  float: left;
+}
+
+.w-commerce-commercelayoutsidebar {
+  display: block !important;
+  width: 40% !important;
+  float: left;
+}
+
+.w-commerce-commercecheckoutorderitemswrapper,
+.w-commerce-commercecheckoutblockheader,
+.w-commerce-commercecheckoutblockcontent,
+.w-commerce-commercecheckoutcustomerinfowrapper,
+.w-commerce-commercecheckoutshippingaddresswrapper,
+.w-commerce-commercecheckoutpaymentinfowrapper {
+  display: block !important;
+  width: 100% !important;
+}
+
+.w-commerce-commercecheckoutordersummarywrapper {
+  display: block !important;
+}
+
+.cart-items-list {
+  display: block !important;
+}
+
+.customer-info-section {
+  margin-bottom: 30px;
+  padding-bottom: 25px;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.customer-info-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.section-subheading {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.w-commerce-commercecheckoutplaceorderbutton {
+  margin-top: 20px;
+}
+
+/* Make text-block-4 smaller and bolder in Order Summary */
+.text-block-4 {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Form field spacing and sizing improvements */
+.additional-fields {
+  padding-top: 20px;
+  padding-bottom: 10px;
+  margin-top: 15px;
+}
+
+.w-commerce-commercecheckoutlabel {
+  margin-bottom: 12px;
+  display: block;
+}
+
+.w-commerce-commercecheckoutshippingcountryselector.input {
+  width: 100%;
+  min-width: 120px;
+  padding-right: 30px;
+  box-sizing: border-box;
+  height: 38px;
+}
+
+.w-commerce-commercecheckoutrow {
+  margin-top: 15px;
+}
+
+select.input, 
+textarea.input,
+.w-commerce-commercecheckoutemailinput.input,
+.w-commerce-commercecheckoutshippingfullname.input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0;
+  background-color: #fff;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+select.input {
+  appearance: menulist;
+  -webkit-appearance: menulist;
+  -moz-appearance: menulist;
+}
+
+textarea.input {
+  min-height: 100px;
+}
+
+/* Empty cart message styles */
+.empty-cart-message {
+  padding: 30px;
+  text-align: center;
+}
+
+.empty-cart-message p {
+  font-size: 16px;
+  margin-bottom: 20px;
+  color: #666;
+}
+
+.empty-cart-message .btn {
+  display: inline-block;
+  padding: 10px 20px;
+  background-color: #00ae6b;
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+}
+
+.empty-cart-message .btn:hover {
+  background-color: #009a5f;
+}
+
+/* Stripe element styles */
+.w-commerce-commercecheckoutcardnumber,
+.w-commerce-commercecheckoutcardexpirationdate,
+.w-commerce-commercecheckoutcardsecuritycode {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 8px 12px;
+  height: 38px;
+}
+
+.StripeElement {
+  width: 100%;
+  height: 100%;
+}
+
+.StripeElement--focus {
+  border-color: #00ae6b;
+  box-shadow: 0 0 0 1px rgba(0, 174, 107, 0.5);
+}
+
+.StripeElement--invalid {
+  border-color: #e53935;
+}
+
+/* Payment success message styles */
+.payment-success-message {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 40px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.payment-success-content h2 {
+  color: #00ae6b;
+  margin-bottom: 20px;
+  font-size: 24px;
+}
+
+.payment-success-content p {
+  margin-bottom: 16px;
+  color: #666;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.payment-success-buttons {
+  margin-top: 30px;
+}
+
+.payment-success-buttons .btn {
+  display: inline-block;
+  padding: 12px 24px;
+  background-color: #00ae6b;
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+}
+
+.payment-success-buttons .btn:hover {
+  background-color: #009a5f;
+}
+
+/* Discount line styling */
+.discount-line {
+  color: #00ae6b;
+  font-weight: 600;
+}
+
+/* Error message styling */
+.w-commerce-commercecheckouterrorstate {
+  background-color: #fff4f4;
+  border: 1px solid #ffcdd2;
+  border-radius: 4px;
+  padding: 16px;
+  margin-top: 20px;
+}
+
+.w-checkout-error-msg {
+  color: #e53935;
+  font-size: 14px;
+}
+
+/* Responsive styles for small screens */
+@media screen and (max-width: 991px) {
+  .w-commerce-commercelayoutmain,
+  .w-commerce-commercelayoutsidebar {
+    width: 100% !important;
+    padding-right: 0;
+  }
+  
+  .w-commerce-commercelayoutsidebar {
+    margin-top: 30px;
+  }
+  
+  .checkout-item-details {
+    flex-direction: column;
+  }
+  
+  .checkout-item-image {
+    width: 100%;
+    max-width: 200px;
+    margin-bottom: 15px;
+  }
+}
+
+@media screen and (max-width: 767px) {
+  .w-commerce-commercecheckoutrow {
+    flex-direction: column;
+  }
+  
+  .w-commerce-commercecheckoutcolumn {
+    width: 100%;
+    margin-bottom: 15px;
+  }
+  
+  .w-commerce-commercecheckoutcolumn:last-child {
+    margin-bottom: 0;
+  }
+}
+
+@media screen and (max-width: 479px) {
+  .checkout-item {
+    padding: 15px;
+  }
+  
+  .w-commerce-commercecheckoutblockcontent {
+    padding: 15px;
+  }
+  
+  .payment-success-message {
+    padding: 20px;
+  }
+} 
