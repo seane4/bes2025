@@ -4,7 +4,7 @@
   "description": "Banff Energy Summit 2025 Website",
   "scripts": {
     "dev": "vercel dev",
-    "build": "mkdir -p public && cp -r *.html css js images public/",
+    "build": "echo 'Static site, no build required'",
     "start": "vercel dev"
   },
   "dependencies": {

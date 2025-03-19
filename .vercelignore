@@ -1,0 +1,7 @@
+.git
+.github
+.gitignore
+README.md
+supabase/migrations
+server
+node_modules 
