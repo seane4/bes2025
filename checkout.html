@@ -80,7 +80,12 @@
                     <div class="w-commerce-commercecartformwrapper">
                       <form data-node-type="commerce-cart-form" style="display:none" class="w-commerce-commercecartform">
                         <script type="text/x-wf-template" id="wf-template-d0872620-da83-2e6a-1190-a6df4dad026e"></script>
-                        <div class="w-commerce-commercecartlist" data-wf-collection="database.commerceOrder.userItems" data-wf-template-id="wf-template-d0872620-da83-2e6a-1190-a6df4dad026e"></div>
+                        <div class="w-commerce-commercecartlist" data-wf-collection="database.commerceOrder.userItems" data-wf-template-id="wf-template-d0872620-da83-2e6a-1190-a6df4dad026e">
+                          <div class="w-commerce-commercecheckoutorderitem cart-items-list">
+                            <!-- Keep all the cart item display but remove shirt size inputs and special instructions here -->
+                            <!-- ... existing cart items content ... -->
+                          </div>
+                        </div>
                         <div class="w-commerce-commercecartfooter">
                           <div aria-live="" aria-atomic="false" class="w-commerce-commercecartlineitem">
                             <div class="text-block-15">Subtotal</div>
@@ -157,29 +162,10 @@
               <h4 class="heading-2">Items in Order</h4>
             </div>
             <fieldset class="w-commerce-commercecheckoutblockcontent block-content">
-              <div role="list" class="w-commerce-commercecheckoutorderitemslist cart-items-list" id="cart-items-list">
-                <!-- Cart items will be dynamically populated here -->
-              </div>
-              <div class="additional-fields" style="padding-top: 20px; padding-bottom: 10px;">
-                <div class="w-commerce-commercecheckoutrow">
-                  <div class="w-commerce-commercecheckoutcolumn">
-                    <label class="w-commerce-commercecheckoutlabel" style="margin-bottom: 12px;">Shirt Size (if applicable)</label>
-                    <select class="w-commerce-commercecheckoutshippingcountryselector input" id="shirt-size" style="width: 100%; min-width: 120px; padding-right: 30px;">
-                      <option value="">Select Size</option>
-                      <option value="XS">XS</option>
-                      <option value="S">S</option>
-                      <option value="M">M</option>
-                      <option value="L">L</option>
-                      <option value="XL">XL</option>
-                      <option value="XXL">XXL</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="w-commerce-commercecheckoutrow" style="margin-top: 15px;">
-                  <div class="w-commerce-commercecheckoutcolumn">
-                    <label class="w-commerce-commercecheckoutlabel" style="margin-bottom: 12px;">Special Requirements/Notes</label>
-                    <textarea class="w-commerce-commercecheckoutshippingcity input" placeholder="Any dietary restrictions, accessibility needs, or special requests"></textarea>
-                  </div>
+              <div role="list" class="w-commerce-commercecheckoutorderitemslist" data-wf-collection="database.commerceOrder.userItems" data-wf-template-id="wf-template-d0872620-da83-2e6a-1190-a6df4dad026e">
+                <div class="w-commerce-commercecheckoutorderitem cart-items-list">
+                  <!-- Keep all the cart item display but remove shirt size inputs and special instructions here -->
+                  <!-- ... existing cart items content ... -->
                 </div>
               </div>
             </fieldset>
@@ -191,75 +177,112 @@
             </div>
             <fieldset class="w-commerce-commercecheckoutblockcontent block-content">
               <!-- Primary Guest Information -->
-              <form id="customer-info-form">
-                <div class="customer-info-section">
-                  <h5 class="section-subheading">Primary Guest Information</h5>
-                  <label class="w-commerce-commercecheckoutlabel">Email *</label>
-                  <input class="w-commerce-commercecheckoutemailinput input" type="email" name="email" required="">
-                  
-                  <label class="w-commerce-commercecheckoutlabel">Full Name *</label>
-                  <input class="w-commerce-commercecheckoutshippingfullname input" type="text" name="primary_name" required="">
-                  
-                  <label class="w-commerce-commercecheckoutlabel">Phone Number *</label>
-                  <input class="w-commerce-commercecheckoutshippingfullname input" type="tel" name="primary_phone" required="">
-                  
-                  <label class="w-commerce-commercecheckoutlabel">Shirt Size *</label>
-                  <select class="w-commerce-commercecheckoutshippingcountryselector input" name="primary_shirt_size" required="">
-                    <option value="">Select Size</option>
-                    <option value="XS">XS</option>
-                    <option value="S">S</option>
-                    <option value="M">M</option>
-                    <option value="L">L</option>
-                    <option value="XL">XL</option>
-                    <option value="XXL">XXL</option>
-                  </select>
+              <div class="customer-info-section">
+                <div class="w-commerce-commercecheckoutsummaryblockheader block-header">
+                  <h5>Customer Information</h5>
                 </div>
-
-                <!-- Spouse Information -->
-                <div class="customer-info-section">
-                  <h5 class="section-subheading">Spouse Information</h5>
-                  <label class="w-commerce-commercecheckoutlabel">Spouse Full Name</label>
-                  <input class="w-commerce-commercecheckoutshippingfullname input" type="text" name="spouse_name">
-                  
-                  <label class="w-commerce-commercecheckoutlabel">Spouse Shirt Size</label>
-                  <select class="w-commerce-commercecheckoutshippingcountryselector input" name="spouse_shirt_size">
-                    <option value="">Select Size</option>
-                    <option value="XS">XS</option>
-                    <option value="S">S</option>
-                    <option value="M">M</option>
-                    <option value="L">L</option>
-                    <option value="XL">XL</option>
-                    <option value="XXL">XXL</option>
-                  </select>
+                <div class="w-commerce-commercecheckoutblockcontent block-content">
+                  <div class="w-commerce-commercecheckoutrow">
+                    <div class="w-commerce-commercecheckoutcolumn">
+                      <label class="w-commerce-commercecheckoutlabel">Email *</label>
+                      <input class="w-commerce-commercecheckoutemailinput input" type="email" name="email" required="">
+                    </div>
+                    <div class="w-commerce-commercecheckoutcolumn">
+                      <label class="w-commerce-commercecheckoutlabel">Full Name *</label>
+                      <input class="w-commerce-commercecheckoutshippingfullname input" type="text" name="primary_name" required="">
+                    </div>
+                    <div class="w-commerce-commercecheckoutcolumn">
+                      <label class="w-commerce-commercecheckoutlabel">Phone Number *</label>
+                      <input class="w-commerce-commercecheckoutshippingfullname input" type="tel" name="primary_phone" required="">
+                    </div>
+                  </div>
+                  <div class="w-commerce-commercecheckoutrow">
+                    <div class="w-commerce-commercecheckoutcolumn">
+                      <label class="w-commerce-commercecheckoutlabel">Shirt Size *</label>
+                      <select class="w-commerce-commercecheckoutshippingcountryselector input" name="primary_shirt_size" required="">
+                        <option value="">Select Size</option>
+                        <option value="XS">XS</option>
+                        <option value="S">S</option>
+                        <option value="M">M</option>
+                        <option value="L">L</option>
+                        <option value="XL">XL</option>
+                        <option value="XXL">XXL</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
+              </div>
 
-                <!-- Additional Guest Information -->
-                <div class="customer-info-section">
-                  <h5 class="section-subheading">Additional Guest Information (Optional)</h5>
-                  <label class="w-commerce-commercecheckoutlabel">Additional Guest Name</label>
-                  <input class="w-commerce-commercecheckoutshippingfullname input" type="text" name="additional_guest_name">
-                  
-                  <label class="w-commerce-commercecheckoutlabel">Additional Guest Shirt Size</label>
-                  <select class="w-commerce-commercecheckoutshippingcountryselector input" name="additional_guest_shirt_size">
-                    <option value="">Select Size</option>
-                    <option value="XS">XS</option>
-                    <option value="S">S</option>
-                    <option value="M">M</option>
-                    <option value="L">L</option>
-                    <option value="XL">XL</option>
-                    <option value="XXL">XXL</option>
-                  </select>
+              <!-- Spouse Information -->
+              <div class="customer-info-section">
+                <div class="w-commerce-commercecheckoutsummaryblockheader block-header">
+                  <h5>Spouse Information</h5>
                 </div>
+                <div class="w-commerce-commercecheckoutblockcontent block-content">
+                  <div class="w-commerce-commercecheckoutrow">
+                    <div class="w-commerce-commercecheckoutcolumn">
+                      <label class="w-commerce-commercecheckoutlabel">Spouse Full Name</label>
+                      <input class="w-commerce-commercecheckoutshippingfullname input" type="text" name="spouse_name">
+                    </div>
+                    <div class="w-commerce-commercecheckoutcolumn">
+                      <label class="w-commerce-commercecheckoutlabel">Spouse Shirt Size</label>
+                      <select class="w-commerce-commercecheckoutshippingcountryselector input" name="spouse_shirt_size">
+                        <option value="">Select Size</option>
+                        <option value="XS">XS</option>
+                        <option value="S">S</option>
+                        <option value="M">M</option>
+                        <option value="L">L</option>
+                        <option value="XL">XL</option>
+                        <option value="XXL">XXL</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-                <!-- Address Information -->
-                <div class="customer-info-section">
-                  <h5 class="section-subheading">Address Information *</h5>
-                  <label class="w-commerce-commercecheckoutlabel">Street Address *</label>
-                  <input class="w-commerce-commercecheckoutshippingstreetaddress input" type="text" name="address_line1" required="">
-                  
-                  <label class="w-commerce-commercecheckoutlabel">Apartment/Suite</label>
-                  <input class="w-commerce-commercecheckoutshippingstreetaddressoptional input" type="text" name="address_line2">
-                  
+              <!-- Additional Guest Information -->
+              <div class="customer-info-section">
+                <div class="w-commerce-commercecheckoutsummaryblockheader block-header">
+                  <h5>Additional Guest Information (Optional)</h5>
+                </div>
+                <div class="w-commerce-commercecheckoutblockcontent block-content">
+                  <div class="w-commerce-commercecheckoutrow">
+                    <div class="w-commerce-commercecheckoutcolumn">
+                      <label class="w-commerce-commercecheckoutlabel">Additional Guest Name</label>
+                      <input class="w-commerce-commercecheckoutshippingfullname input" type="text" name="additional_guest_name">
+                    </div>
+                    <div class="w-commerce-commercecheckoutcolumn">
+                      <label class="w-commerce-commercecheckoutlabel">Additional Guest Shirt Size</label>
+                      <select class="w-commerce-commercecheckoutshippingcountryselector input" name="additional_guest_shirt_size">
+                        <option value="">Select Size</option>
+                        <option value="XS">XS</option>
+                        <option value="S">S</option>
+                        <option value="M">M</option>
+                        <option value="L">L</option>
+                        <option value="XL">XL</option>
+                        <option value="XXL">XXL</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Shipping Address -->
+              <div class="customer-info-section">
+                <div class="w-commerce-commercecheckoutsummaryblockheader block-header">
+                  <h5>Shipping Address</h5>
+                </div>
+                <div class="w-commerce-commercecheckoutblockcontent block-content">
+                  <div class="w-commerce-commercecheckoutrow">
+                    <div class="w-commerce-commercecheckoutcolumn">
+                      <label class="w-commerce-commercecheckoutlabel">Street Address *</label>
+                      <input class="w-commerce-commercecheckoutshippingstreetaddress input" type="text" name="address_line1" required="">
+                    </div>
+                    <div class="w-commerce-commercecheckoutcolumn">
+                      <label class="w-commerce-commercecheckoutlabel">Apartment/Suite</label>
+                      <input class="w-commerce-commercecheckoutshippingstreetaddressoptional input" type="text" name="address_line2">
+                    </div>
+                  </div>
                   <div class="w-commerce-commercecheckoutrow">
                     <div class="w-commerce-commercecheckoutcolumn">
                       <label class="w-commerce-commercecheckoutlabel">City *</label>
@@ -274,22 +297,37 @@
                       <input class="w-commerce-commercecheckoutshippingzippostalcode input" name="zip" type="text" required="">
                     </div>
                   </div>
+                  <div class="w-commerce-commercecheckoutrow">
+                    <div class="w-commerce-commercecheckoutcolumn">
+                      <label class="w-commerce-commercecheckoutlabel">Country *</label>
+                      <select class="w-commerce-commercecheckoutshippingcountryselector input" name="country" required="">
+                        <option value="US" selected="">United States</option>
+                        <option value="CA">Canada</option>
+                        <!-- ... other country options ... -->
+                      </select>
+                    </div>
+                  </div>
                   
-                  <label class="w-commerce-commercecheckoutlabel">Country *</label>
-                  <select class="w-commerce-commercecheckoutshippingcountryselector input" name="country" required="">
-                    <option value="US" selected="">United States</option>
-                    <option value="CA">Canada</option>
-                    <!-- ... other country options ... -->
-                  </select>
+                  <!-- Add the billing checkbox here, after shipping address fields but before closing the block -->
+                  <label class="w-checkbox checkbox-field" style="margin-top: 15px; display: block;">
+                    <input type="checkbox" id="billing-same-as-shipping" name="billing-same-as-shipping" checked style="opacity:1; position:relative; margin-right: 5px;">
+                    <span class="checkbox-label w-form-label" for="billing-same-as-shipping">Billing address same as shipping</span>
+                  </label>
                 </div>
+              </div>
 
-                <!-- Special Requirements -->
-                <div class="customer-info-section">
-                  <h5 class="section-subheading">Additional Information</h5>
-                  <label class="w-commerce-commercecheckoutlabel">Special Requirements/Notes</label>
-                  <textarea class="w-commerce-commercecheckoutshippingcity input" name="special_requirements" placeholder="Any dietary restrictions, accessibility needs, or special requests"></textarea>
+              <!-- Special Requirements -->
+              <div class="customer-info-section">
+                <div class="w-commerce-commercecheckoutsummaryblockheader block-header">
+                  <h5>Special Requirements</h5>
                 </div>
-              </form>
+                <div class="w-commerce-commercecheckoutblockcontent block-content">
+                  <div class="additional-fields">
+                    <label for="special_requirements" class="w-commerce-commercecheckoutlabel">Special dietary requirements, accommodations, or other notes:</label>
+                    <textarea id="special_requirements" name="special_requirements" class="w-commerce-commercecheckoutshippingaddresscity input"></textarea>
+                  </div>
+                </div>
+              </div>
             </fieldset>
           </form>
           <form data-node-type="commerce-checkout-shipping-address-wrapper" class="w-commerce-commercecheckoutshippingaddresswrapper shipping-address">
@@ -297,319 +335,28 @@
               <h4 class="heading-2">Shipping Address</h4>
               <div class="text-block-20">* Required</div>
             </div>
-            <fieldset class="w-commerce-commercecheckoutblockcontent block-content"><label for="" class="w-commerce-commercecheckoutlabel">Full Name *</label><input class="w-commerce-commercecheckoutshippingfullname input" name="name" type="text" required=""><label for="" class="w-commerce-commercecheckoutlabel">Street Address *</label><input class="w-commerce-commercecheckoutshippingstreetaddress input" name="address_line1" type="text" required=""><input aria-label="" class="w-commerce-commercecheckoutshippingstreetaddressoptional input" name="address_line2" type="text">
-              <div class="w-commerce-commercecheckoutrow row">
-                <div class="w-commerce-commercecheckoutcolumn"><label for="" class="w-commerce-commercecheckoutlabel">City *</label><input class="w-commerce-commercecheckoutshippingcity input" name="address_city" type="text" required=""></div>
-                <div class="w-commerce-commercecheckoutcolumn"><label for="" class="w-commerce-commercecheckoutlabel">State/Province</label><input class="w-commerce-commercecheckoutshippingstateprovince input" name="address_state" type="text"></div>
-                <div class="w-commerce-commercecheckoutcolumn"><label for="" class="w-commerce-commercecheckoutlabel">Zip/Postal Code *</label><input data-node-type="commerce-checkout-shipping-zip-field" class="w-commerce-commercecheckoutshippingzippostalcode input" name="address_zip" type="text" required=""></div>
-              </div><label for="" class="w-commerce-commercecheckoutlabel">Country *</label><select class="w-commerce-commercecheckoutshippingcountryselector input" name="address_country">
-                <option value="AF">Afghanistan</option>
-                <option value="AX">Aland Islands</option>
-                <option value="AL">Albania</option>
-                <option value="DZ">Algeria</option>
-                <option value="AS">American Samoa</option>
-                <option value="AD">Andorra</option>
-                <option value="AO">Angola</option>
-                <option value="AI">Anguilla</option>
-                <option value="AG">Antigua and Barbuda</option>
-                <option value="AR">Argentina</option>
-                <option value="AM">Armenia</option>
-                <option value="AW">Aruba</option>
-                <option value="AU">Australia</option>
-                <option value="AT">Austria</option>
-                <option value="AZ">Azerbaijan</option>
-                <option value="BS">Bahamas</option>
-                <option value="BH">Bahrain</option>
-                <option value="BD">Bangladesh</option>
-                <option value="BB">Barbados</option>
-                <option value="BY">Belarus</option>
-                <option value="BE">Belgium</option>
-                <option value="BZ">Belize</option>
-                <option value="BJ">Benin</option>
-                <option value="BM">Bermuda</option>
-                <option value="BT">Bhutan</option>
-                <option value="BO">Bolivia</option>
-                <option value="BQ">Bonaire, Saint Eustatius and Saba</option>
-                <option value="BA">Bosnia and Herzegovina</option>
-                <option value="BW">Botswana</option>
-                <option value="BR">Brazil</option>
-                <option value="IO">British Indian Ocean Territory</option>
-                <option value="VG">British Virgin Islands</option>
-                <option value="BN">Brunei</option>
-                <option value="BG">Bulgaria</option>
-                <option value="BF">Burkina Faso</option>
-                <option value="BI">Burundi</option>
-                <option value="CV">Cabo Verde</option>
-                <option value="KH">Cambodia</option>
-                <option value="CM">Cameroon</option>
-                <option value="CA">Canada</option>
-                <option value="KY">Cayman Islands</option>
-                <option value="CF">Central African Republic</option>
-                <option value="TD">Chad</option>
-                <option value="CL">Chile</option>
-                <option value="CN">China</option>
-                <option value="CX">Christmas Island</option>
-                <option value="CC">Cocos Islands</option>
-                <option value="CO">Colombia</option>
-                <option value="KM">Comoros</option>
-                <option value="CK">Cook Islands</option>
-                <option value="CR">Costa Rica</option>
-                <option value="HR">Croatia</option>
-                <option value="CU">Cuba</option>
-                <option value="CW">Curacao</option>
-                <option value="CY">Cyprus</option>
-                <option value="CZ">Czechia</option>
-                <option value="CD">Democratic Republic of the Congo</option>
-                <option value="DK">Denmark</option>
-                <option value="DJ">Djibouti</option>
-                <option value="DM">Dominica</option>
-                <option value="DO">Dominican Republic</option>
-                <option value="EC">Ecuador</option>
-                <option value="EG">Egypt</option>
-                <option value="SV">El Salvador</option>
-                <option value="GQ">Equatorial Guinea</option>
-                <option value="ER">Eritrea</option>
-                <option value="EE">Estonia</option>
-                <option value="SZ">Eswatini</option>
-                <option value="ET">Ethiopia</option>
-                <option value="FK">Falkland Islands</option>
-                <option value="FO">Faroe Islands</option>
-                <option value="FJ">Fiji</option>
-                <option value="FI">Finland</option>
-                <option value="FR">France</option>
-                <option value="GF">French Guiana</option>
-                <option value="PF">French Polynesia</option>
-                <option value="TF">French Southern Territories</option>
-                <option value="GA">Gabon</option>
-                <option value="GM">Gambia</option>
-                <option value="GE">Georgia</option>
-                <option value="DE">Germany</option>
-                <option value="GH">Ghana</option>
-                <option value="GI">Gibraltar</option>
-                <option value="GR">Greece</option>
-                <option value="GL">Greenland</option>
-                <option value="GD">Grenada</option>
-                <option value="GP">Guadeloupe</option>
-                <option value="GU">Guam</option>
-                <option value="GT">Guatemala</option>
-                <option value="GG">Guernsey</option>
-                <option value="GN">Guinea</option>
-                <option value="GW">Guinea-Bissau</option>
-                <option value="GY">Guyana</option>
-                <option value="HT">Haiti</option>
-                <option value="HN">Honduras</option>
-                <option value="HK">Hong Kong</option>
-                <option value="HU">Hungary</option>
-                <option value="IS">Iceland</option>
-                <option value="IN">India</option>
-                <option value="ID">Indonesia</option>
-                <option value="IR">Iran</option>
-                <option value="IQ">Iraq</option>
-                <option value="IE">Ireland</option>
-                <option value="IM">Isle of Man</option>
-                <option value="IL">Israel</option>
-                <option value="IT">Italy</option>
-                <option value="CI">Ivory Coast</option>
-                <option value="JM">Jamaica</option>
-                <option value="JP">Japan</option>
-                <option value="JE">Jersey</option>
-                <option value="JO">Jordan</option>
-                <option value="KZ">Kazakhstan</option>
-                <option value="KE">Kenya</option>
-                <option value="KI">Kiribati</option>
-                <option value="XK">Kosovo</option>
-                <option value="KW">Kuwait</option>
-                <option value="KG">Kyrgyzstan</option>
-                <option value="LA">Laos</option>
-                <option value="LV">Latvia</option>
-                <option value="LB">Lebanon</option>
-                <option value="LS">Lesotho</option>
-                <option value="LR">Liberia</option>
-                <option value="LY">Libya</option>
-                <option value="LI">Liechtenstein</option>
-                <option value="LT">Lithuania</option>
-                <option value="LU">Luxembourg</option>
-                <option value="MO">Macao</option>
-                <option value="MG">Madagascar</option>
-                <option value="MW">Malawi</option>
-                <option value="MY">Malaysia</option>
-                <option value="MV">Maldives</option>
-                <option value="ML">Mali</option>
-                <option value="MT">Malta</option>
-                <option value="MH">Marshall Islands</option>
-                <option value="MQ">Martinique</option>
-                <option value="MR">Mauritania</option>
-                <option value="MU">Mauritius</option>
-                <option value="YT">Mayotte</option>
-                <option value="MX">Mexico</option>
-                <option value="FM">Micronesia</option>
-                <option value="MD">Moldova</option>
-                <option value="MC">Monaco</option>
-                <option value="MN">Mongolia</option>
-                <option value="ME">Montenegro</option>
-                <option value="MS">Montserrat</option>
-                <option value="MA">Morocco</option>
-                <option value="MZ">Mozambique</option>
-                <option value="MM">Myanmar</option>
-                <option value="NA">Namibia</option>
-                <option value="NR">Nauru</option>
-                <option value="NP">Nepal</option>
-                <option value="NL">Netherlands</option>
-                <option value="NC">New Caledonia</option>
-                <option value="NZ">New Zealand</option>
-                <option value="NI">Nicaragua</option>
-                <option value="NE">Niger</option>
-                <option value="NG">Nigeria</option>
-                <option value="NU">Niue</option>
-                <option value="NF">Norfolk Island</option>
-                <option value="KP">North Korea</option>
-                <option value="MK">North Macedonia</option>
-                <option value="MP">Northern Mariana Islands</option>
-                <option value="NO">Norway</option>
-                <option value="OM">Oman</option>
-                <option value="PK">Pakistan</option>
-                <option value="PW">Palau</option>
-                <option value="PS">Palestinian Territory</option>
-                <option value="PA">Panama</option>
-                <option value="PG">Papua New Guinea</option>
-                <option value="PY">Paraguay</option>
-                <option value="PE">Peru</option>
-                <option value="PH">Philippines</option>
-                <option value="PN">Pitcairn</option>
-                <option value="PL">Poland</option>
-                <option value="PT">Portugal</option>
-                <option value="PR">Puerto Rico</option>
-                <option value="QA">Qatar</option>
-                <option value="CG">Republic of the Congo</option>
-                <option value="RE">Reunion</option>
-                <option value="RO">Romania</option>
-                <option value="RU">Russia</option>
-                <option value="RW">Rwanda</option>
-                <option value="BL">Saint Barthelemy</option>
-                <option value="SH">Saint Helena</option>
-                <option value="KN">Saint Kitts and Nevis</option>
-                <option value="LC">Saint Lucia</option>
-                <option value="MF">Saint Martin</option>
-                <option value="PM">Saint Pierre and Miquelon</option>
-                <option value="VC">Saint Vincent and the Grenadines</option>
-                <option value="WS">Samoa</option>
-                <option value="SM">San Marino</option>
-                <option value="ST">Sao Tome and Principe</option>
-                <option value="SA">Saudi Arabia</option>
-                <option value="SN">Senegal</option>
-                <option value="RS">Serbia</option>
-                <option value="SC">Seychelles</option>
-                <option value="SL">Sierra Leone</option>
-                <option value="SG">Singapore</option>
-                <option value="SX">Sint Maarten</option>
-                <option value="SK">Slovakia</option>
-                <option value="SI">Slovenia</option>
-                <option value="SB">Solomon Islands</option>
-                <option value="SO">Somalia</option>
-                <option value="ZA">South Africa</option>
-                <option value="GS">South Georgia and the South Sandwich Islands</option>
-                <option value="KR">South Korea</option>
-                <option value="SS">South Sudan</option>
-                <option value="ES">Spain</option>
-                <option value="LK">Sri Lanka</option>
-                <option value="SD">Sudan</option>
-                <option value="SR">Suriname</option>
-                <option value="SJ">Svalbard and Jan Mayen</option>
-                <option value="SE">Sweden</option>
-                <option value="CH">Switzerland</option>
-                <option value="SY">Syria</option>
-                <option value="TW">Taiwan</option>
-                <option value="TJ">Tajikistan</option>
-                <option value="TZ">Tanzania</option>
-                <option value="TH">Thailand</option>
-                <option value="TL">Timor Leste</option>
-                <option value="TG">Togo</option>
-                <option value="TK">Tokelau</option>
-                <option value="TO">Tonga</option>
-                <option value="TT">Trinidad and Tobago</option>
-                <option value="TN">Tunisia</option>
-                <option value="TR">Turkey</option>
-                <option value="TM">Turkmenistan</option>
-                <option value="TC">Turks and Caicos Islands</option>
-                <option value="TV">Tuvalu</option>
-                <option value="VI">U.S. Virgin Islands</option>
-                <option value="UG">Uganda</option>
-                <option value="UA">Ukraine</option>
-                <option value="AE">United Arab Emirates</option>
-                <option value="GB">United Kingdom</option>
-                <option value="US">United States</option>
-                <option value="UM">United States Minor Outlying Islands</option>
-                <option value="UY">Uruguay</option>
-                <option value="UZ">Uzbekistan</option>
-                <option value="VU">Vanuatu</option>
-                <option value="VA">Vatican</option>
-                <option value="VE">Venezuela</option>
-                <option value="VN">Vietnam</option>
-                <option value="WF">Wallis and Futuna</option>
-                <option value="EH">Western Sahara</option>
-                <option value="YE">Yemen</option>
-                <option value="ZM">Zambia</option>
-                <option value="ZW">Zimbabwe</option>
-              </select>
-            </fieldset>
-          </form>
-          <form data-node-type="commerce-checkout-shipping-methods-wrapper" class="w-commerce-commercecheckoutshippingmethodswrapper shipping-method">
-            <div class="w-commerce-commercecheckoutblockheader block-header">
-              <h4>Shipping Method</h4>
-            </div>
-            <fieldset class="block-content">
-              <script type="text/x-wf-template" id="wf-template-5e853c3379b34ff1c6675eea000000000042">%3Clabel%20class%3D%22w-commerce-commercecheckoutshippingmethoditem%22%3E%3Cinput%20required%3D%22%22%20type%3D%22radio%22%20name%3D%22shipping-method-choice%22%2F%3E%3Cdiv%20class%3D%22w-commerce-commercecheckoutshippingmethoddescriptionblock%22%3E%3Cdiv%20class%3D%22w-commerce-commerceboldtextblock%22%3E%3C%2Fdiv%3E%3Cdiv%3E%3C%2Fdiv%3E%3C%2Fdiv%3E%3Cdiv%3E%3C%2Fdiv%3E%3C%2Flabel%3E</script>
-              <div data-node-type="commerce-checkout-shipping-methods-list" class="w-commerce-commercecheckoutshippingmethodslist" data-wf-collection="database.commerceOrder.availableShippingMethods" data-wf-template-id="wf-template-5e853c3379b34ff1c6675eea000000000042"><label class="w-commerce-commercecheckoutshippingmethoditem"><input required="" type="radio" name="shipping-method-choice">
-                  <div class="w-commerce-commercecheckoutshippingmethoddescriptionblock">
-                    <div class="w-commerce-commerceboldtextblock"></div>
-                    <div></div>
-                  </div>
-                  <div></div>
-                </label></div>
-              <div data-node-type="commerce-checkout-shipping-methods-empty-state" style="display:none" class="w-commerce-commercecheckoutshippingmethodsemptystate">
-                <div>No shipping methods are available for the address given.</div>
-              </div>
-            </fieldset>
-          </form>
-          <div class="w-commerce-commercecheckoutpaymentinfowrapper">
-            <div class="w-commerce-commercecheckoutblockheader">
-              <h4 class="heading-2">Payment Info</h4>
-              <div class="text-block-21">* Required</div>
-            </div>
             <fieldset class="w-commerce-commercecheckoutblockcontent block-content">
-              <label for="" class="w-commerce-commercecheckoutlabel">Card Number *</label>
-              <div data-wf-stripe-element-type="cardNumber" data-wf-style-map="{}" style="position:relative" class="w-commerce-commercecheckoutcardnumber input">
-                <div></div>
-                <div style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0"></div>
-              </div>
-              <div class="w-commerce-commercecheckoutrow">
-                <div class="w-commerce-commercecheckoutcolumn"><label for="" class="w-commerce-commercecheckoutlabel">Expiration Date *</label>
-                  <div data-wf-stripe-element-type="cardExpiry" data-wf-style-map="{}" style="position:relative" class="w-commerce-commercecheckoutcardexpirationdate input">
-                    <div></div>
-                    <div style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0"></div>
-                  </div>
+              <label for="" class="w-commerce-commercecheckoutlabel">Full Name *</label>
+              <input class="w-commerce-commercecheckoutshippingfullname input" name="name" type="text" required="">
+              <label for="" class="w-commerce-commercecheckoutlabel">Street Address *</label>
+              <input class="w-commerce-commercecheckoutshippingstreetaddress input" name="address_line1" type="text" required="">
+              <input aria-label="" class="w-commerce-commercecheckoutshippingstreetaddressoptional input" name="address_line2" type="text">
+              <div class="w-commerce-commercecheckoutrow row">
+                <div class="w-commerce-commercecheckoutcolumn">
+                  <label for="" class="w-commerce-commercecheckoutlabel">City *</label>
+                  <input class="w-commerce-commercecheckoutshippingcity input" name="address_city" type="text" required="">
                 </div>
-                <div class="w-commerce-commercecheckoutcolumn"><label for="" class="w-commerce-commercecheckoutlabel">Security Code *</label>
-                  <div data-wf-stripe-element-type="cardCvc" data-wf-style-map="{}" style="position:relative" class="w-commerce-commercecheckoutcardsecuritycode input">
-                    <div></div>
-                    <div style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0"></div>
-                  </div>
+                <div class="w-commerce-commercecheckoutcolumn">
+                  <label for="" class="w-commerce-commercecheckoutlabel">State/Province</label>
+                  <input class="w-commerce-commercecheckoutshippingstateprovince input" name="address_state" type="text">
+                </div>
+                <div class="w-commerce-commercecheckoutcolumn">
+                  <label for="" class="w-commerce-commercecheckoutlabel">Zip/Postal Code *</label>
+                  <input data-node-type="commerce-checkout-shipping-zip-field" class="w-commerce-commercecheckoutshippingzippostalcode input" name="address_zip" type="text" required="">
                 </div>
               </div>
-              <div class="w-commerce-commercecheckoutbillingaddresstogglewrapper"><input id="billing-address-toggle" data-node-type="commerce-checkout-billing-address-toggle-checkbox" class="w-commerce-commercecheckoutbillingaddresstogglecheckbox" type="checkbox" checked=""><label for="billing-address-toggle" class="w-commerce-commercecheckoutbillingaddresstogglelabel">Billing address same as shipping</label></div>
-            </fieldset>
-          </div>
-          <form data-node-type="commerce-checkout-billing-address-wrapper" style="display:none" class="w-commerce-commercecheckoutbillingaddresswrapper">
-            <div class="w-commerce-commercecheckoutblockheader block-header">
-              <h4 class="heading-2">Billing Address</h4>
-              <div class="text-block-22">* Required</div>
-            </div>
-            <fieldset class="w-commerce-commercecheckoutblockcontent block-content"><label for="" class="w-commerce-commercecheckoutlabel">Full Name *</label><input class="w-commerce-commercecheckoutbillingfullname input" name="name" type="text" required=""><label for="" class="w-commerce-commercecheckoutlabel">Street Address *</label><input class="w-commerce-commercecheckoutbillingstreetaddress input" name="address_line1" required="" type="text"><input aria-label="" class="w-commerce-commercecheckoutbillingstreetaddressoptional input" name="address_line2" type="text">
-              <div class="w-commerce-commercecheckoutrow">
-                <div class="w-commerce-commercecheckoutcolumn"><label for="" class="w-commerce-commercecheckoutlabel">City *</label><input class="w-commerce-commercecheckoutbillingcity input" name="address_city" type="text" required=""></div>
-                <div class="w-commerce-commercecheckoutcolumn"><label for="" class="w-commerce-commercecheckoutlabel">State/Province</label><input class="w-commerce-commercecheckoutbillingstateprovince input" name="address_state" type="text"></div>
-                <div class="w-commerce-commercecheckoutcolumn"><label for="" class="w-commerce-commercecheckoutlabel">Zip/Postal Code *</label><input data-node-type="commerce-checkout-billing-zip-field" class="w-commerce-commercecheckoutbillingzippostalcode input" name="address_zip" type="text" required=""></div>
-              </div><label for="" class="w-commerce-commercecheckoutlabel">Country *</label><select class="w-commerce-commercecheckoutbillingcountryselector input" name="address_country">
+              <label for="" class="w-commerce-commercecheckoutlabel">Country *</label>
+              <select class="w-commerce-commercecheckoutshippingcountryselector input" name="address_country">
                 <option value="AF">Afghanistan</option>
                 <option value="AX">Aland Islands</option>
                 <option value="AL">Albania</option>
@@ -860,8 +607,48 @@
               </select>
             </fieldset>
           </form>
-        </div>
-        <div class="w-commerce-commercelayoutsidebar">
+          <form data-node-type="commerce-checkout-shipping-methods-wrapper" class="w-commerce-commercecheckoutshippingmethodswrapper shipping-method">
+            <div class="w-commerce-commercecheckoutblockheader block-header">
+              <h4>Shipping Method</h4>
+            </div>
+            <fieldset class="block-content">
+              <script type="text/x-wf-template" id="wf-template-5e853c3379b34ff1c6675eea000000000042">%3Clabel%20class%3D%22w-commerce-commercecheckoutshippingmethoditem%22%3E%3Cinput%20required%3D%22%22%20type%3D%22radio%22%20name%3D%22shipping-method-choice%22%2F%3E%3Cdiv%20class%3D%22w-commerce-commercecheckoutshippingmethoddescriptionblock%22%3E%3Cdiv%20class%3D%22w-commerce-commerceboldtextblock%22%3E%3C%2Fdiv%3E%3Cdiv%3E%3C%2Fdiv%3E%3C%2Fdiv%3E%3Cdiv%3E%3C%2Fdiv%3E%3C%2Flabel%3E</script>
+              <div data-node-type="commerce-checkout-shipping-methods-list" class="w-commerce-commercecheckoutshippingmethodslist" data-wf-collection="database.commerceOrder.availableShippingMethods" data-wf-template-id="wf-template-5e853c3379b34ff1c6675eea000000000042"><label class="w-commerce-commercecheckoutshippingmethoditem"><input required="" type="radio" name="shipping-method-choice">
+                  <div class="w-commerce-commercecheckoutshippingmethoddescriptionblock">
+                    <div class="w-commerce-commerceboldtextblock"></div>
+                    <div></div>
+                  </div>
+                  <div></div>
+                </label></div>
+              <div data-node-type="commerce-checkout-shipping-methods-empty-state" style="display:none" class="w-commerce-commercecheckoutshippingmethodsemptystate">
+                <div>No shipping methods are available for the address given.</div>
+              </div>
+            </fieldset>
+          </form>
+          <div class="w-commerce-commercecheckoutpaymentinfowrapper">
+            <div class="w-commerce-commercecheckoutblockheader">
+              <h4 class="heading-2">Payment Info</h4>
+              <div class="text-block-21">* Required</div>
+            </div>
+            <fieldset class="w-commerce-commercecheckoutblockcontent block-content">
+              <div class="w-commerce-commercecheckoutrow">
+                <div class="w-commerce-commercecheckoutcolumn">
+                  <label class="w-commerce-commercecheckoutlabel">Card Number</label>
+                  <div id="card-number-element" class="w-commerce-commercecheckoutcardnumber card-field" style="min-height: 40px;"></div>
+                </div>
+              </div>
+              <div class="w-commerce-commercecheckoutrow">
+                <div class="w-commerce-commercecheckoutcolumn">
+                  <label class="w-commerce-commercecheckoutlabel">Expiration Date</label>
+                  <div id="card-expiry-element" class="w-commerce-commercecheckoutcardexpirationdate card-field" style="min-height: 40px;"></div>
+                </div>
+                <div class="w-commerce-commercecheckoutcolumn">
+                  <label class="w-commerce-commercecheckoutlabel">Security Code</label>
+                  <div id="card-cvc-element" class="w-commerce-commercecheckoutcardsecuritycode card-field" style="min-height: 40px;"></div>
+                </div>
+              </div>
+            </fieldset>
+          </div>
           <div class="w-commerce-commercecheckoutordersummarywrapper">
             <div class="w-commerce-commercecheckoutsummaryblockheader block-header">
               <h4 class="heading-2">Order Summary</h4>
@@ -889,6 +676,8 @@
               </div>
             </fieldset>
           </div>
+        </div>
+        <div class="w-commerce-commercelayoutsidebar">
           <a href="#" id="place-order-btn" value="Place Order" data-node-type="commerce-checkout-place-order-button" class="w-commerce-commercecheckoutplaceorderbutton btn" data-loading-text="Processing Payment...">Place Order</a>
           <div data-node-type="commerce-checkout-error-state" style="display:none" class="w-commerce-commercecheckouterrorstate alert-wrapper danger">
             <div aria-live="polite" class="w-checkout-error-msg" data-w-info-error="There was an error processing your customer info. Please try again, or contact us if you continue to have problems." data-w-shipping-error="Sorry. We can't ship your order to the address provided." data-w-billing-error="Your payment could not be completed with the payment information provided. Please make sure that your card and billing address information is correct, or try a different payment card, to complete this order. Contact us if you continue to have problems." data-w-payment-error="There was an error processing your payment. Please try again, or contact us if you continue to have problems." data-w-pricing-error="The prices of one or more items in your cart have changed. Please refresh this page and try again." data-w-minimum-error="The order minimum was not met. Add more items to your cart to continue." data-w-extras-error="A merchant setting has changed that impacts your cart. Please refresh and try again." data-w-product-error="One or more of the products in your cart have been removed. Please refresh the page and try again." data-w-invalid-discount-error="This discount is invalid." data-w-expired-discount-error="This discount is no longer available." data-w-usage-reached-discount-error="This discount is no longer available." data-w-requirements-not-met-error="Your order does not meet the requirements for this discount.">There was an error processing your customer info. Please try again, or contact us if you continue to have problems.</div>
@@ -912,146 +701,27 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/stripe-payments.js" type="text/javascript"></script>
   <script src="js/stripe-test.js" type="text/javascript"></script>
-  <script>
-    // Ensure checkout page is initialized
-    document.addEventListener('DOMContentLoaded', function() {
-      if (typeof initCheckoutPage === 'function') {
-        initCheckoutPage();
-      }
-      
-      // Add inline styles to fix layout issues
-      const styleEl = document.createElement('style');
-      styleEl.textContent = `
-        .w-commerce-commercelayoutcontainer {
-          display: flex !important;
-          flex-direction: row !important;
-          flex-wrap: wrap;
-        }
-        
-        .w-commerce-commercelayoutmain {
-          display: block !important;
-          width: 60% !important;
-          float: left;
-        }
-        
-        .w-commerce-commercelayoutsidebar {
-          display: block !important;
-          width: 40% !important;
-          float: left;
-        }
-        
-        .w-commerce-commercecheckoutorderitemswrapper,
-        .w-commerce-commercecheckoutblockheader,
-        .w-commerce-commercecheckoutblockcontent,
-        .w-commerce-commercecheckoutcustomerinfowrapper,
-        .w-commerce-commercecheckoutshippingaddresswrapper,
-        .w-commerce-commercecheckoutpaymentinfowrapper {
-          display: block !important;
-        }
-        
-        .checkout-form {
-          display: block !important;
-        }
-        
-        /* Checkout remove button styles */
-        .checkout-remove-btn {
-          margin-top: 10px;
-          padding: 6px 12px;
-          background-color: #f5f5f5;
-          border: 1px solid #e0e0e0;
-          border-radius: 4px;
-          font-size: 14px;
-          color: #666;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        
-        .checkout-remove-btn:hover {
-          background-color: #e0e0e0;
-          color: #333;
-        }
-        
-        /* Order summary item text styles */
-        .text-block-4 {
-          font-size: 14px !important;
-          font-weight: 600 !important;
-        }
-        
-        /* Form field spacing and sizing improvements */
-        .additional-fields {
-          padding-top: 20px !important;
-          padding-bottom: 10px !important;
-          margin-top: 15px !important;
-        }
-        
-        .w-commerce-commercecheckoutlabel {
-          margin-bottom: 12px !important;
-          display: block !important;
-        }
-        
-        .w-commerce-commercecheckoutshippingcountryselector.input {
-          width: 100% !important;
-          min-width: 120px !important;
-          padding-right: 30px !important;
-          box-sizing: border-box !important;
-          height: 38px !important;
-        }
-        
-        .w-commerce-commercecheckoutrow {
-          margin-top: 15px !important;
-        }
-        
-        select.input, 
-        textarea.input,
-        .w-commerce-commercecheckoutemailinput.input,
-        .w-commerce-commercecheckoutshippingfullname.input {
-          width: 100% !important;
-          box-sizing: border-box !important;
-          padding: 8px 12px !important;
-          border-radius: 4px !important;
-          border: 1px solid #e0e0e0 !important;
-          background-color: #fff !important;
-          font-size: 14px !important;
-          line-height: 1.5 !important;
-        }
-        
-        select.input {
-          appearance: menulist !important;
-          -webkit-appearance: menulist !important;
-          -moz-appearance: menulist !important;
-        }
-        
-        textarea.input {
-          min-height: 100px !important;
-        }
-
-        /* Stripe element styles */
-        .w-commerce-commercecheckoutcardnumber,
-        .w-commerce-commercecheckoutcardexpirationdate,
-        .w-commerce-commercecheckoutcardsecuritycode {
-          background-color: #fff !important;
-          border: 1px solid #e0e0e0 !important;
-          border-radius: 4px !important;
-          padding: 8px 12px !important;
-          height: 38px !important;
-        }
-
-        .StripeElement {
-          width: 100% !important;
-          height: 100% !important;
-        }
-
-        .StripeElement--focus {
-          border-color: #00ae6b !important;
-          box-shadow: 0 0 0 1px rgba(0, 174, 107, 0.5) !important;
-        }
-
-        .StripeElement--invalid {
-          border-color: #e53935 !important;
-        }
-      `;
-      document.head.appendChild(styleEl);
-    });
-  </script>
+  <style>
+    .card-field {
+      position: relative;
+      min-height: 40px;
+      padding: 8px 12px;
+      border: 1px solid #e6e6e6;
+      border-radius: 4px;
+      background-color: #fff;
+      transition: all 0.2s ease;
+    }
+    .card-field:hover {
+      border-color: #a6a6a6;
+    }
+    .card-field > div {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      z-index: 1 !important;
+    }
+  </style>
 </body>
 </html>

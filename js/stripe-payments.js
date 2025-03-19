@@ -86,20 +86,29 @@ function initializeStripeElements() {
   });
   
   // Mount the Stripe elements to the DOM
-  const cardNumberContainer = document.querySelector('.w-commerce-commercecheckoutcardnumber div');
-  const cardExpiryContainer = document.querySelector('.w-commerce-commercecheckoutcardexpirationdate div');
-  const cardCvcContainer = document.querySelector('.w-commerce-commercecheckoutcardsecuritycode div');
+  const cardNumberContainer = document.getElementById('card-number-element');
+  const cardExpiryContainer = document.getElementById('card-expiry-element');
+  const cardCvcContainer = document.getElementById('card-cvc-element');
   
   if (cardNumberContainer) {
     cardNumberElement.mount(cardNumberContainer);
+    console.log('Card number element mounted');
+  } else {
+    console.error('Card number container not found');
   }
   
   if (cardExpiryContainer) {
     cardExpiryElement.mount(cardExpiryContainer);
+    console.log('Card expiry element mounted');
+  } else {
+    console.error('Card expiry container not found');
   }
   
   if (cardCvcContainer) {
     cardCvcElement.mount(cardCvcContainer);
+    console.log('Card CVC element mounted');
+  } else {
+    console.error('Card CVC container not found');
   }
   
   // Add event listener to the checkout form
