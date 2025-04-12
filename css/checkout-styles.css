@@ -2,47 +2,53 @@
 
 /* Checkout item styles */
 .checkout-item {
-  padding: 20px;
-  border-bottom: 1px solid #e6e6e6;
+  display: block !important;
+  margin-bottom: 20px;
+  padding: 15px;
+  border: 1px solid #e6e6e6;
+  border-radius: 5px;
+  background-color: #fff;
 }
 
-.checkout-item:last-child {
-  border-bottom: none;
-}
-
-.checkout-item-details {
+.checkout-item-content {
   display: flex;
-  gap: 20px;
   align-items: flex-start;
+  gap: 20px;
+}
+
+.checkout-item-image-wrapper {
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 5px;
 }
 
 .checkout-item-image {
-  width: 100px;
-  height: 100px;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  border-radius: 8px;
 }
 
-.checkout-item-info {
+.checkout-item-details {
   flex: 1;
 }
 
 .checkout-item-info h4 {
-  margin: 0 0 10px;
+  margin-top: 0;
+  margin-bottom: 8px;
   font-size: 16px;
   font-weight: 600;
-  color: #333;
 }
 
 .checkout-item-info p {
-  margin: 5px 0;
+  margin: 4px 0;
   font-size: 14px;
   color: #666;
 }
 
 .checkout-remove-btn {
-  margin-top: 10px;
-  padding: 6px 12px;
+  padding: 5px 10px;
   background-color: #f5f5f5;
   border: 1px solid #e0e0e0;
   border-radius: 4px;
@@ -106,6 +112,7 @@
 
 .cart-items-list {
   display: block !important;
+  width: 100%;
 }
 
 .customer-info-section {
@@ -135,7 +142,7 @@
 /* Make text-block-4 smaller and bolder in Order Summary */
 .text-block-4 {
   font-size: 14px;
-  font-weight: 600;
+  color: #333;
 }
 
 /* Form field spacing and sizing improvements */
@@ -188,13 +195,13 @@ textarea.input {
 
 /* Empty cart message styles */
 .empty-cart-message {
-  padding: 30px;
+  padding: 30px 15px;
   text-align: center;
 }
 
 .empty-cart-message p {
-  font-size: 16px;
   margin-bottom: 20px;
+  font-size: 16px;
   color: #666;
 }
 
@@ -214,28 +221,159 @@ textarea.input {
 }
 
 /* Stripe element styles */
-.w-commerce-commercecheckoutcardnumber,
-.w-commerce-commercecheckoutcardexpirationdate,
-.w-commerce-commercecheckoutcardsecuritycode {
+.w-commerce-commercecheckoutpaymentsummarywrapper {
+  margin-bottom: 20px;
+}
+
+.w-commerce-commercecheckoutpaymentsummarywrapper .w-commerce-commercecheckoutblockheader {
+  padding: 4px 20px;
+  background-color: #f5f5f5;
+  margin-bottom: 0;
+}
+
+.w-commerce-commercecheckoutpaymentsummarywrapper .w-commerce-commercecheckoutblockheader h4 {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  font-family: Changa, sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.w-commerce-commercecheckoutpaymentsummarywrapper .w-commerce-commercecheckoutblockcontent {
+  padding: 20px;
   background-color: #fff;
+  border: 1px solid #e6e6e6;
+  font-family: Roboto, sans-serif;
+}
+
+.w-commerce-commercecheckoutpaymentsummarywrapper .w-commerce-commercecheckoutlabel {
+  margin-bottom: 8px;
+  font-family: Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  display: block;
+}
+
+.card-field {
+  position: relative !important;
+  min-height: 38px !important;
+  height: 38px !important;
+  padding: 8px 12px !important;
   border: 1px solid #e0e0e0;
   border-radius: 4px;
-  padding: 8px 12px;
-  height: 38px;
+  background-color: #fff;
+  transition: border-color 0.15s ease;
+  cursor: text;
+  z-index: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  font-family: Roboto, sans-serif !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  margin-bottom: 16px !important;
 }
 
-.StripeElement {
-  width: 100%;
-  height: 100%;
+.card-field:hover {
+  border-color: #909090;
 }
 
-.StripeElement--focus {
+.card-field.focused {
   border-color: #00ae6b;
   box-shadow: 0 0 0 1px rgba(0, 174, 107, 0.5);
 }
 
-.StripeElement--invalid {
+.card-field.invalid {
   border-color: #e53935;
+  box-shadow: 0 0 0 1px #e53935;
+}
+
+.card-field > div,
+.card-field > div > iframe {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: auto !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.StripeElement {
+  width: 100% !important;
+  height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+  font-family: Roboto, sans-serif !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+
+.StripeElement--empty {
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Ensure placeholder text is centered */
+.StripeElement-placeholder {
+  display: flex !important;
+  align-items: center !important;
+  line-height: 1.5 !important;
+  font-family: Roboto, sans-serif !important;
+  color: #666 !important;
+}
+
+/* Fix for Stripe iframe */
+.card-field iframe {
+  z-index: auto !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  height: 38px !important;
+  border: none !important;
+  display: flex !important;
+  align-items: center !important;
+  padding: 0 !important;
+}
+
+/* Error message styling */
+#card-errors {
+  margin-top: 8px;
+  padding: 12px;
+  color: #e53935;
+  background-color: #fff4f4;
+  border: 1px solid #ffcdd2;
+  border-radius: 4px;
+  font-family: Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Submit button styling */
+.w-commerce-commercecheckoutplaceorderbutton {
+  margin-top: 20px;
+  padding: 12px 25px;
+  background-color: #00ae6b;
+  border: none;
+  border-radius: 4px;
+  font-family: Changa, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.w-commerce-commercecheckoutplaceorderbutton:hover {
+  background-color: #009a5f;
+}
+
+.w-commerce-commercecheckoutplaceorderbutton:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
 }
 
 /* Payment success message styles */
@@ -301,6 +439,52 @@ textarea.input {
   font-size: 14px;
 }
 
+/* Discount code styling */
+.discount-success-message {
+  color: #00ae6b;
+  font-size: 14px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: #e8f5e9;
+  border-radius: 4px;
+  font-family: Roboto, sans-serif;
+}
+
+.discount-amount {
+  color: #00ae6b;
+  font-weight: 600;
+}
+
+#discount-line {
+  border-top: 1px dashed #e0e0e0;
+  padding-top: 8px;
+  margin-top: 8px;
+}
+
+/* Disable styling for discount input when code is applied */
+#wf-ecom-discounts:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+#apply-discount-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+/* Error message styling for invalid discount codes */
+.w-commerce-commercecarterrorstate {
+  margin-top: 8px;
+  padding: 12px;
+  color: #e53935;
+  background-color: #fff4f4;
+  border: 1px solid #ffcdd2;
+  border-radius: 4px;
+  font-family: Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 /* Responsive styles for small screens */
 @media screen and (max-width: 991px) {
   .w-commerce-commercelayoutmain,
@@ -351,4 +535,155 @@ textarea.input {
   .payment-success-message {
     padding: 20px;
   }
+}
+
+.w-commerce-commercecheckoutsummarylineitem {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.w-commerce-commercecheckoutsummarylineitem:last-child {
+  border-bottom: none;
+}
+
+.text-block-7 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+#order-summary-list {
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e6e6e6;
+  padding-bottom: 16px;
+}
+
+/* Block header styling consistency */
+.w-commerce-commercecheckoutblockheader {
+  padding: 4px 20px;
+  background-color: #f5f5f5;
+  margin-bottom: 0;
+}
+
+.w-commerce-commercecheckoutblockheader h4 {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  font-family: Changa, sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.block-header {
+  padding: 4px 20px;
+  background-color: #f5f5f5;
+  margin-bottom: 0;
+}
+
+/* Block content styling consistency */
+.w-commerce-commercecheckoutblockcontent {
+  padding: 20px;
+  background-color: #fff;
+  border: 1px solid #e6e6e6;
+  font-family: Roboto, sans-serif;
+}
+
+.block-content {
+  padding: 20px;
+  background-color: #fff;
+  border: 1px solid #e6e6e6;
+  font-family: Roboto, sans-serif;
+}
+
+/* Order items styling */
+.w-commerce-commercecheckoutorderitem {
+  display: flex;
+  padding: 15px;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.w-commerce-commercecheckoutorderitem:last-child {
+  border-bottom: none;
+}
+
+.w-commerce-commercecheckoutorderiteminfo {
+  flex: 1;
+  padding-right: 16px;
+}
+
+.w-commerce-commercecheckoutorderitemimage {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-right: 16px;
+}
+
+.w-commerce-commercecheckoutorderitemtitle {
+  font-family: Roboto, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.w-commerce-commercecheckoutorderitemprice {
+  font-family: Roboto, sans-serif;
+  font-size: 14px;
+  color: #666;
+}
+
+.w-commerce-commercecheckoutorderitemquantity {
+  font-family: Roboto, sans-serif;
+  font-size: 14px;
+  color: #666;
+  margin-top: 4px;
+}
+
+/* Customer info styling */
+.w-commerce-commercecheckoutcustomerinfowrapper {
+  margin-bottom: 30px;
+}
+
+.w-commerce-commercecheckoutcustomerinfowrapper .w-commerce-commercecheckoutlabel {
+  font-family: Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.w-commerce-commercecheckoutcustomerinfowrapper .input {
+  font-family: Roboto, sans-serif;
+}
+
+/* Grand Total Display */
+.grand-total-wrapper {
+  margin: 24px 0;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border: 1px solid #e6e6e6;
+  border-radius: 4px;
+}
+
+.grand-total-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.grand-total-label {
+  font-family: Changa, sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.grand-total-amount {
+  font-family: Changa, sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: #00ae6b;
 } 

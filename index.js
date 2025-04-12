@@ -2,6 +2,15 @@
 document.addEventListener('DOMContentLoaded', function() {
   console.log('Banff Energy Summit 2025 website loaded');
   
+  // Initialize cart display
+  updateCartDisplay();
+  
+  // Initialize checkout page if we're on it
+  if (window.location.pathname.includes('checkout.html')) {
+    console.log('On checkout page, initializing...');
+    initCheckoutPage();
+  }
+  
   // Add cart styles
   const styleSheet = document.createElement('style');
   styleSheet.textContent = `
@@ -602,9 +611,6 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Initialize complete registration button
   initCompleteRegistrationButton();
-
-  // Initialize checkout page functionality
-  initCheckoutPage();
 });
 
 // Initialize the booking form
@@ -1244,96 +1250,154 @@ function initCompleteRegistrationButton() {
   }
 }
 
-// Initialize checkout page functionality
+// Function to remove an item from the cart while on the checkout page
+function removeCartItemFromCheckout(index) {
+  console.log('Removing item from checkout at index:', index);
+  let cart = JSON.parse(localStorage.getItem('cart')) || [];
+  
+  if (index >= 0 && index < cart.length) {
+    cart.splice(index, 1);
+    localStorage.setItem('cart', JSON.stringify(cart));
+    
+    // Refresh the checkout page display
+    initCheckoutPage();
+    
+    // Also update the mini-cart in the header
+    updateCartDisplay();
+  }
+}
+
+// Function to initialize checkout page
 function initCheckoutPage() {
-  // Check if we're on the checkout page by looking for checkout-specific elements
-  const isCheckoutPage = window.location.pathname.includes('checkout.html');
-  
-  if (!isCheckoutPage) return; // Not on checkout page
-  
-  const cartItemsList = document.getElementById('cart-items-list');
-  const orderSummaryList = document.getElementById('order-summary-list');
-  const subtotalAmount = document.getElementById('subtotal-amount');
-  const taxAmount = document.getElementById('tax-amount');
-  const totalAmount = document.getElementById('total-amount');
-
-  // Get cart data
-  const cart = JSON.parse(localStorage.getItem('cart')) || [];
-
-  // Clear existing items
-  if (cartItemsList) {
-    cartItemsList.innerHTML = '';
-  }
-  
-  if (orderSummaryList) {
-    orderSummaryList.innerHTML = '';
-  }
-
-  let subtotal = 0;
-
-  // Display cart items
-  cart.forEach((item, index) => {
-    let itemPrice = 0;
+  try {
+    console.log('Initializing checkout page...');
     
-    if (item.type === 'activity') {
-      itemPrice = parseFloat(item.price);
-    } else {
-      // Accommodation item
-      itemPrice = parseFloat(item.total);
+    // Check if we're actually on the checkout page
+    if (!window.location.pathname.includes('checkout.html')) {
+      console.log('Not on checkout page, skipping initialization');
+      return;
     }
-    
-    // Add to cart items list if it exists
-    if (cartItemsList) {
-      // Create cart item element
+
+    // Find the cart items list container
+    const cartItemsList = document.getElementById('checkout-items-list');
+    if (!cartItemsList) {
+      console.error('Cart items list container not found!');
+      return;
+    }
+
+    // Get cart data
+    const cart = JSON.parse(localStorage.getItem('cart')) || [];
+    console.log('Cart data:', cart);
+
+    // Clear existing items
+    cartItemsList.innerHTML = '';
+
+    // If cart is empty, show message and disable checkout button
+    if (cart.length === 0) {
+      cartItemsList.innerHTML = `
+        <div class="empty-cart-message">
+          <p>Your cart is empty.</p>
+          <a href="register-now.html" class="btn">Return to Registration</a>
+        </div>
+      `;
+      
+      const placeOrderBtn = document.getElementById('place-order-btn');
+      if (placeOrderBtn) {
+        placeOrderBtn.disabled = true;
+        placeOrderBtn.style.opacity = '0.5';
+      }
+      return;
+    }
+
+    // Display each item in cart
+    cart.forEach((item, index) => {
       const itemElement = document.createElement('div');
-      itemElement.className = 'checkout-item';
-      
-      let itemDetails = '';
-      
+      itemElement.className = 'w-commerce-commercecheckoutorderitem checkout-item';
+      itemElement.style.cssText = 'display: block !important; margin-bottom: 20px; padding: 15px; border: 1px solid #e6e6e6;';
+
+      let itemContent = '';
       if (item.type === 'activity') {
-        itemDetails = `
-          <div class="checkout-item-details">
-            <img src="${item.image}" alt="${item.title}" class="checkout-item-image">
-            <div class="checkout-item-info">
-              <h4>${item.title}</h4>
-              <p>Price: $${item.price}</p>
+        itemContent = `
+          <div class="checkout-item-content" style="display: flex; align-items: flex-start; gap: 20px;">
+            <div class="checkout-item-image-wrapper" style="width: 100px; height: 100px; flex-shrink: 0;">
+              <img src="${item.image || 'images/activity-placeholder.jpg'}" alt="${item.title}" class="checkout-item-image" style="width: 100%; height: 100%; object-fit: cover;">
             </div>
+            <div class="checkout-item-details" style="flex: 1;">
+              <div class="checkout-item-info">
+                <h4 style="margin: 0 0 8px; font-size: 16px;">${item.title}</h4>
+                <p style="margin: 4px 0;">Price: $${item.price}</p>
+              </div>
+            </div>
+            <button class="checkout-remove-btn" data-index="${index}" style="padding: 8px 12px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">Remove</button>
           </div>
         `;
       } else {
-        // Accommodation item
-        itemDetails = `
-          <div class="checkout-item-details">
-            <img src="${item.image || 'images/Layer-6.jpg'}" alt="${item.roomType}" class="checkout-item-image">
-            <div class="checkout-item-info">
-              <h4>${item.roomType}</h4>
-              <p>Check-in: ${item.checkInDate}</p>
-              <p>Check-out: ${item.checkOutDate}</p>
-              <p>Guests: ${item.guestCount}</p>
-              <p>Nights: ${item.nights}</p>
-              <p>Price per night: $${item.pricePerNight}</p>
-              <p>Total: $${item.total}</p>
+        // Room booking
+        const roomImages = {
+          'Standard Room': 'images/Layer-6.jpg',
+          'Deluxe Room': 'images/goatcreekimg-comp.jpg',
+          'Junior Suite': 'images/hotelimg5.jpg',
+          'Executive Suite': 'images/reduced-imgbes.jpg'
+        };
+        
+        itemContent = `
+          <div class="checkout-item-content" style="display: flex; align-items: flex-start; gap: 20px;">
+            <div class="checkout-item-image-wrapper" style="width: 100px; height: 100px; flex-shrink: 0;">
+              <img src="${roomImages[item.roomType] || 'images/Layer-6.jpg'}" alt="${item.roomType}" class="checkout-item-image" style="width: 100%; height: 100%; object-fit: cover;">
             </div>
+            <div class="checkout-item-details" style="flex: 1;">
+              <div class="checkout-item-info">
+                <h4 style="margin: 0 0 8px; font-size: 16px;">${item.roomType}</h4>
+                <p style="margin: 4px 0;">Check-in: ${item.checkInDate}</p>
+                <p style="margin: 4px 0;">Check-out: ${item.checkOutDate}</p>
+                <p style="margin: 4px 0;">Guests: ${item.guestCount}</p>
+                <p style="margin: 4px 0;">Nights: ${item.nights}</p>
+                <p style="margin: 4px 0;">Price per night: $${item.pricePerNight}</p>
+                <p style="margin: 4px 0;">Total: $${item.total}</p>
+              </div>
+            </div>
+            <button class="checkout-remove-btn" data-index="${index}" style="padding: 8px 12px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">Remove</button>
           </div>
         `;
       }
 
-      itemElement.innerHTML = itemDetails;
+      itemElement.innerHTML = itemContent;
       cartItemsList.appendChild(itemElement);
-    }
+    });
 
-    // Add to order summary if it exists
-    if (orderSummaryList) {
-      const summaryItem = document.createElement('div');
-      summaryItem.className = 'w-commerce-commercecheckoutsummarylineitem';
-      summaryItem.innerHTML = `
-        <div class="text-block-4">${item.type === 'activity' ? item.title : item.roomType}</div>
-        <div class="text-block-7">$${itemPrice.toFixed(2)}</div>
-      `;
-      orderSummaryList.appendChild(summaryItem);
-    }
+    // Add event listeners to remove buttons
+    const removeButtons = document.querySelectorAll('.checkout-remove-btn');
+    removeButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const index = parseInt(this.getAttribute('data-index'));
+        removeCartItemFromCheckout(index);
+      });
+    });
 
-    subtotal += itemPrice;
+    // Update summary amounts
+    updateOrderSummary(cart);
+
+  } catch (error) {
+    console.error('Error in initCheckoutPage:', error);
+  }
+}
+
+// Function to update order summary
+function updateOrderSummary(cart) {
+  const subtotalAmount = document.getElementById('subtotal-amount');
+  const taxAmount = document.getElementById('tax-amount');
+  const totalAmount = document.getElementById('total-amount');
+  const orderSummaryList = document.getElementById('order-summary-list');
+
+  let subtotal = 0;
+
+  // Calculate subtotal
+  cart.forEach(item => {
+    if (item.type === 'activity') {
+      subtotal += parseFloat(item.price);
+    } else {
+      subtotal += parseFloat(item.total);
+    }
   });
 
   // Calculate tax and total
@@ -1346,112 +1410,17 @@ function initCheckoutPage() {
   if (taxAmount) taxAmount.textContent = `$${tax.toFixed(2)}`;
   if (totalAmount) totalAmount.textContent = `$${total.toFixed(2)}`;
 
-  // Add styles for checkout items
-  const styleSheet = document.createElement('style');
-  styleSheet.textContent = `
-    .checkout-item {
-      padding: 20px;
-      border-bottom: 1px solid #e6e6e6;
-    }
-
-    .checkout-item:last-child {
-      border-bottom: none;
-    }
-
-    .checkout-item-details {
-      display: flex;
-      gap: 20px;
-      align-items: flex-start;
-    }
-
-    .checkout-item-image {
-      width: 100px;
-      height: 100px;
-      object-fit: cover;
-      border-radius: 8px;
-    }
-
-    .checkout-item-info {
-      flex: 1;
-    }
-
-    .checkout-item-info h4 {
-      margin: 0 0 10px;
-      font-size: 16px;
-      font-weight: 600;
-      color: #333;
-    }
-
-    .checkout-item-info p {
-      margin: 5px 0;
-      font-size: 14px;
-      color: #666;
-    }
-
-    .w-commerce-commercecartapplepaybutton,
-    .w-commerce-commercecartquickcheckoutbutton {
-      display: none !important;
-    }
-    
-    /* Ensure the checkout form is properly displayed */
-    .w-commerce-commercecheckoutformcontainer {
-      display: block;
-      width: 100%;
-    }
-    
-    .w-commerce-commercelayoutcontainer {
-      display: flex !important;
-      flex-direction: row !important;
-      flex-wrap: wrap;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    
-    .w-commerce-commercelayoutmain {
-      display: block !important;
-      width: 60% !important;
-      padding-right: 20px;
-      float: left;
-    }
-    
-    .w-commerce-commercelayoutsidebar {
-      display: block !important;
-      width: 40% !important;
-      float: left;
-    }
-    
-    .w-commerce-commercecheckoutorderitemswrapper,
-    .w-commerce-commercecheckoutblockheader,
-    .w-commerce-commercecheckoutblockcontent,
-    .w-commerce-commercecheckoutcustomerinfowrapper,
-    .w-commerce-commercecheckoutshippingaddresswrapper,
-    .w-commerce-commercecheckoutpaymentinfowrapper {
-      display: block !important;
-      width: 100% !important;
-    }
-    
-    .w-commerce-commercecheckoutordersummarywrapper {
-      display: block !important;
-    }
-    
-    .cart-items-list {
-      display: block !important;
-    }
-    
-    .customer-info-section {
-      margin-bottom: 20px;
-    }
-    
-    .section-subheading {
-      margin-top: 0;
-      margin-bottom: 15px;
-      font-size: 18px;
-      font-weight: 600;
-    }
-    
-    .w-commerce-commercecheckoutplaceorderbutton {
-      margin-top: 20px;
-    }
-  `;
-  document.head.appendChild(styleSheet);
+  // Update order summary list
+  if (orderSummaryList) {
+    orderSummaryList.innerHTML = '';
+    cart.forEach(item => {
+      const summaryItem = document.createElement('div');
+      summaryItem.className = 'w-commerce-commercecheckoutsummarylineitem';
+      summaryItem.innerHTML = `
+        <div class="text-block-4">${item.type === 'activity' ? item.title : item.roomType}</div>
+        <div class="text-block-7">$${item.type === 'activity' ? item.price : item.total}</div>
+      `;
+      orderSummaryList.appendChild(summaryItem);
+    });
+  }
 } 

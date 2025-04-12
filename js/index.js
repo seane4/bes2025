@@ -634,6 +634,9 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Update navigation - this should work on all pages
   updateNavigation();
+
+  // Initialize Stripe
+  const stripe = Stripe('pk_test_51R4RcN2MXwfL6XiwkmmrM5kUfwRuCQqZm3nUgDHlvLA6Am1KpQBEUVpopAn0vl42z1waaJqWyZkPWZm3XY2ccZCh00Hgm3h78X');
 });
 
 // Initialize the booking form
@@ -1286,7 +1289,8 @@ function initCheckoutPage() {
   // Add event listener for URL parameters in case of payment redirect
   checkForPaymentStatus();
   
-  const cartItemsList = document.getElementById('cart-items-list');
+  // Find all cart item lists
+  const cartItemsList = document.getElementById('checkout-items-list');
   const orderSummaryList = document.getElementById('order-summary-list');
   const subtotalAmount = document.getElementById('subtotal-amount');
   const taxAmount = document.getElementById('tax-amount');
@@ -1341,64 +1345,58 @@ function initCheckoutPage() {
   // Display cart items
   cart.forEach((item, index) => {
     let itemPrice = 0;
+    let itemImage = '';
+    let itemDetails = '';
     
     if (item.type === 'activity') {
       itemPrice = parseFloat(item.price);
+      itemImage = item.image || 'images/activity-placeholder.jpg';
+      itemDetails = `
+        <div class="checkout-item-details">
+          <div class="checkout-item-info">
+            <h4>${item.title}</h4>
+            <p>Price: $${item.price}</p>
+          </div>
+        </div>
+      `;
     } else {
       // Accommodation item
       itemPrice = parseFloat(item.total);
+      const roomImages = {
+        'Standard Room': 'images/Layer-6.jpg',
+        'Deluxe Room': 'images/goatcreekimg-comp.jpg',
+        'Junior Suite': 'images/hotelimg5.jpg',
+        'Executive Suite': 'images/reduced-imgbes.jpg'
+      };
+      itemImage = roomImages[item.roomType] || 'images/Layer-6.jpg';
+      itemDetails = `
+        <div class="checkout-item-details">
+          <div class="checkout-item-info">
+            <h4>${item.roomType}</h4>
+            <p>Check-in: ${item.checkInDate}</p>
+            <p>Check-out: ${item.checkOutDate}</p>
+            <p>Guests: ${item.guestCount}</p>
+            <p>Nights: ${item.nights}</p>
+            <p>Price per night: $${item.pricePerNight}</p>
+            <p>Total: $${item.total}</p>
+          </div>
+        </div>
+      `;
     }
     
     // Add to cart items list if it exists
     if (cartItemsList) {
-      // Create cart item element
       const itemElement = document.createElement('div');
-      itemElement.className = 'checkout-item';
-      
-      let itemDetails = '';
-      let itemImage = '';
-      
-      if (item.type === 'activity') {
-        itemImage = item.image || 'images/activity-placeholder.jpg'; 
-        itemDetails = `
-          <div class="checkout-item-details">
-            <img src="${itemImage}" alt="${item.title}" class="checkout-item-image">
-            <div class="checkout-item-info">
-              <h4>${item.title}</h4>
-              <p>Price: $${item.price}</p>
-              <button class="checkout-remove-btn" data-index="${index}">Remove</button>
-            </div>
+      itemElement.className = 'w-commerce-commercecheckoutorderitem checkout-item';
+      itemElement.innerHTML = `
+        <div class="checkout-item-content">
+          <div class="checkout-item-image-wrapper">
+            <img src="${itemImage}" alt="${item.type === 'activity' ? item.title : item.roomType}" class="checkout-item-image">
           </div>
-        `;
-      } else {
-        // Accommodation item with default image fallback
-        const roomImages = {
-          'Standard Room': 'images/Layer-6.jpg',
-          'Deluxe Room': 'images/goatcreekimg-comp.jpg',
-          'Junior Suite': 'images/hotelimg5.jpg',
-          'Executive Suite': 'images/reduced-imgbes.jpg'
-        };
-        
-        itemImage = roomImages[item.roomType] || 'images/Layer-6.jpg';
-        
-        itemDetails = `
-          <div class="checkout-item-details">
-            <img src="${itemImage}" alt="${item.roomType}" class="checkout-item-image">
-            <div class="checkout-item-info">
-              <h4>${item.roomType}</h4>
-              <p>Check-in: ${item.checkInDate}</p>
-              <p>Check-out: ${item.checkOutDate}</p>
-              <p>Guests: ${item.guestCount}</p>
-              <p>Nights: ${item.nights}</p>
-              <p>Price per night: $${item.pricePerNight}</p>
-              <p>Total: $${item.total}</p>
-              <button class="checkout-remove-btn" data-index="${index}">Remove</button>
-            </div>
-          </div>
-        `;
-      }
-
-      itemElement.innerHTML = itemDetails;
+          ${itemDetails}
+          <button class="checkout-remove-btn" data-index="${index}">Remove</button>
+        </div>
+      `;
       cartItemsList.appendChild(itemElement);
     }
 
@@ -1657,7 +1655,7 @@ function removeCartItemFromCheckout(index) {
     
     // If cart is now empty, show empty cart message
     if (cart.length === 0) {
-      const cartItemsList = document.getElementById('cart-items-list');
+      const cartItemsList = document.getElementById('checkout-items-list');
       const orderSummaryList = document.getElementById('order-summary-list');
       const subtotalAmount = document.getElementById('subtotal-amount');
       const taxAmount = document.getElementById('tax-amount');
@@ -1698,4 +1696,48 @@ function removeCartItemFromCheckout(index) {
       initCheckoutPage();
     }
   }
+}
+
+// Checkout JS Bridge Script
+console.log('Checkout JS bridge script loaded from js/index.js');
+
+// This script ensures cart data consistency between the main index.js script
+// and other JS files loaded on the checkout page
+
+// This ensures cart data is available to all scripts
+function ensureCartDataConsistency() {
+  // Access cart data from localStorage
+  const cart = JSON.parse(localStorage.getItem('cart')) || [];
+  console.log('Checkout bridge - Cart data retrieved. Number of items:', cart.length);
+  
+  if (cart.length > 0) {
+    console.log('Checkout bridge - Cart contains items:');
+    cart.forEach((item, index) => {
+      console.log(`Item ${index}:`, item);
+    });
+  } else {
+    console.log('Checkout bridge - Cart is empty');
+  }
+  
+  return cart;
+}
+
+// Execute immediately to make cart data available
+const checkoutCart = ensureCartDataConsistency();
+console.log('Checkout bridge - Cart data made available to other scripts');
+
+// Expose necessary functions to global scope if needed, but defer to main index.js
+if (window.initCheckoutPage) {
+  console.log('Checkout bridge - initCheckoutPage function already exists, using that');
+} else {
+  console.log('Checkout bridge - Main initCheckoutPage not found, waiting for it to load');
+  // Wait for the main index.js to load
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.initCheckoutPage) {
+      console.log('Checkout bridge - Main initCheckoutPage now found, calling it');
+      window.initCheckoutPage();
+    } else {
+      console.error('Checkout bridge - Main initCheckoutPage still not found after page load');
+    }
+  });
 } 

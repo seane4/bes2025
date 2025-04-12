@@ -8888,4 +8888,158 @@ blockquote {
   animation: buttonPulse 0.5s ease;
 }
 
+/* Sponsor Page Styles */
+.sponsorship-benefits {
+  list-style-type: none;
+  padding: 0;
+  margin: 0 0 20px 0;
+}
+
+.sponsorship-benefits li {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  font-size: 15px;
+}
+
+.sponsorship-benefits li:last-child {
+  border-bottom: none;
+}
+
+/* Make the activity cards responsive on the sponsor page */
+@media screen and (max-width: 767px) {
+  .activities-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .activity-card {
+    margin-bottom: 30px;
+  }
+}
+
+/* Style for the price amount in sponsor page */
+.activity-options select option {
+  font-weight: normal;
+}
+
+/* Add a highlight to sponsor cards */
+.activity-card:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  transform: translateY(-5px);
+  transition: all 0.3s ease;
+}
+
+/* Activity card styles if they don't already exist */
+.activities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 30px;
+  margin-top: 40px;
+}
+
+.activity-card {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  background-color: #fff;
+}
+
+.activity-image {
+  height: 200px;
+  overflow: hidden;
+}
+
+.activity-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.activity-card:hover .activity-image img {
+  transform: scale(1.05);
+}
+
+.activity-content {
+  padding: 20px;
+}
+
+.activity-title {
+  margin-top: 0;
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.activity-description {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.activity-options {
+  margin-top: 15px;
+}
+
+.selection-group {
+  margin-bottom: 15px;
+}
+
+.selection-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.variant-select, .guest-select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+.variant-description {
+  font-size: 13px;
+  color: #666;
+  font-style: italic;
+  margin-top: 5px;
+}
+
+.activity-add-btn {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 12px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  width: 100%;
+  transition: background-color 0.3s;
+}
+
+.activity-add-btn:hover {
+  background-color: #3e9142;
+}
+
+/* Complete Sponsorship Section */
+.hero-section.contact-hero.compeltecta {
+  background-color: #f8f8f8;
+  margin-top: 50px;
+}
+
+.hero-heading.eventtitle.ctatitle {
+  color: #333;
+  font-size: 36px;
+}
+
+.hero-paragraph.eventsubtitle.ctatitle.ctaparagraph {
+  color: #666;
+  max-width: 700px;
+  margin: 0 auto 30px;
+}
+
 

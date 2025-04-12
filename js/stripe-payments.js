@@ -2,8 +2,22 @@
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize Stripe elements once the DOM is loaded
   if (window.location.pathname.includes('checkout.html')) {
-    initializeStripeElements();
-    initializeSupabase();
+    // Wait for env-config.js to load
+    const checkStripeKey = setInterval(() => {
+      if (window.STRIPE_PUBLISHABLE_KEY) {
+        clearInterval(checkStripeKey);
+        initializeStripeElements();
+        initializeSupabase();
+      }
+    }, 100);
+
+    // Timeout after 5 seconds
+    setTimeout(() => {
+      clearInterval(checkStripeKey);
+      if (!window.STRIPE_PUBLISHABLE_KEY) {
+        console.error('Failed to load Stripe publishable key');
+      }
+    }, 5000);
   }
 });
 
@@ -19,99 +33,147 @@ let cardCvcElement;
 let supabase;
 
 function initializeSupabase() {
-  const SUPABASE_URL = 'https://your-supabase-project.supabase.co';
-  const SUPABASE_ANON_KEY = 'your-supabase-anon-key';
+  if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
+    console.error('Supabase configuration missing');
+    return;
+  }
   
-  // Create Supabase client
-  supabase = supabaseClient.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  console.log('Supabase client initialized');
+  try {
+    // Create Supabase client
+    supabase = supabaseClient.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+    console.log('Supabase client initialized');
+  } catch (error) {
+    console.error('Error initializing Supabase:', error);
+  }
 }
 
 function initializeStripeElements() {
   console.log('Initializing Stripe elements...');
   
-  // Get Stripe publishable key from environment or use a default test key
-  const stripePublishableKey = window.STRIPE_PUBLISHABLE_KEY || 'pk_test_51OxxlOKPl0Oc7cDJfhAVFnllgPBPizxYwMmhJPw7Uqu0iiC7ks12XcCEKm0J7KDGZGPOi8a2DKwDPzdN4yJrBGXL00lQ56I8Yn';
+  if (!window.STRIPE_PUBLISHABLE_KEY) {
+    console.error('Stripe publishable key not found');
+    return;
+  }
   
-  // Initialize Stripe with the publishable key
-  stripe = Stripe(stripePublishableKey);
-  
-  // Create Stripe elements
-  elements = stripe.elements({
-    fonts: [
-      {
-        cssSrc: 'https://fonts.googleapis.com/css?family=Sen:400,700,800',
+  try {
+    // Initialize Stripe with the publishable key
+    stripe = Stripe(window.STRIPE_PUBLISHABLE_KEY);
+    
+    // Create Stripe elements
+    elements = stripe.elements({
+      fonts: [
+        {
+          cssSrc: 'https://fonts.googleapis.com/css?family=Sen:400,700,800',
+        },
+      ],
+      locale: 'auto'
+    });
+    
+    // Customize the style of the Stripe elements
+    const style = {
+      base: {
+        color: '#333',
+        fontFamily: '"Sen", sans-serif',
+        fontSmoothing: 'antialiased',
+        fontSize: '14px',
+        '::placeholder': {
+          color: '#aab7c4'
+        },
+        ':-webkit-autofill': {
+          color: '#333'
+        }
       },
-    ],
-    locale: 'auto'
-  });
-  
-  // Customize the style of the Stripe elements
-  const style = {
-    base: {
-      color: '#333',
-      fontFamily: '"Sen", sans-serif',
-      fontSmoothing: 'antialiased',
-      fontSize: '14px',
-      '::placeholder': {
-        color: '#aab7c4'
-      },
-      ':-webkit-autofill': {
-        color: '#333'
+      invalid: {
+        color: '#e53935',
+        iconColor: '#e53935',
+        '::placeholder': {
+          color: '#e53935'
+        }
       }
-    },
-    invalid: {
-      color: '#e53935',
-      iconColor: '#e53935',
-      '::placeholder': {
-        color: '#e53935'
-      }
-    }
-  };
-  
-  // Create individual Stripe elements for card number, expiration, and CVC
-  cardNumberElement = elements.create('cardNumber', {
-    style: style,
-    placeholder: 'Card number'
-  });
-  
-  cardExpiryElement = elements.create('cardExpiry', {
-    style: style,
-    placeholder: 'MM / YY'
-  });
-  
-  cardCvcElement = elements.create('cardCvc', {
-    style: style,
-    placeholder: 'CVC'
-  });
-  
-  // Mount the Stripe elements to the DOM
+    };
+    
+    // Create individual Stripe elements for card number, expiration, and CVC
+    cardNumberElement = elements.create('cardNumber', {
+      style: style,
+      placeholder: 'Card number'
+    });
+    
+    cardExpiryElement = elements.create('cardExpiry', {
+      style: style,
+      placeholder: 'MM / YY'
+    });
+    
+    cardCvcElement = elements.create('cardCvc', {
+      style: style,
+      placeholder: 'CVC'
+    });
+    
+    // Store the Stripe elements in a global variable for access from other scripts
+    window.stripeElements = {
+      number: cardNumberElement,
+      expiry: cardExpiryElement,
+      cvc: cardCvcElement
+    };
+    
+    // Wait for the DOM to be fully ready
+    setTimeout(() => {
+      mountStripeElements();
+    }, 500);
+  } catch (error) {
+    console.error('Error initializing Stripe:', error);
+  }
+}
+
+function mountStripeElements() {
   const cardNumberContainer = document.getElementById('card-number-element');
   const cardExpiryContainer = document.getElementById('card-expiry-element');
   const cardCvcContainer = document.getElementById('card-cvc-element');
   
-  if (cardNumberContainer) {
-    cardNumberElement.mount(cardNumberContainer);
-    console.log('Card number element mounted');
-  } else {
-    console.error('Card number container not found');
-  }
+  // Helper function to mount a single element
+  const mountElement = (element, container, name) => {
+    if (!container) {
+      console.error(`${name} container not found`);
+      return;
+    }
+    
+    try {
+      // Clean up any existing element
+      if (element._mounted) {
+        element.unmount();
+      }
+      
+      // Mount the element
+      element.mount(container);
+      element._mounted = true;
+      console.log(`${name} element mounted`);
+      
+      // Add event listeners
+      element.on('focus', () => {
+        container.classList.add('focused');
+      });
+      
+      element.on('blur', () => {
+        container.classList.remove('focused');
+      });
+      
+      element.on('change', (event) => {
+        if (event.error) {
+          container.classList.add('invalid');
+        } else {
+          container.classList.remove('invalid');
+        }
+      });
+    } catch (error) {
+      console.error(`Error mounting ${name} element:`, error);
+    }
+  };
   
-  if (cardExpiryContainer) {
-    cardExpiryElement.mount(cardExpiryContainer);
-    console.log('Card expiry element mounted');
-  } else {
-    console.error('Card expiry container not found');
-  }
+  // Mount each element
+  mountElement(cardNumberElement, cardNumberContainer, 'Card number');
+  mountElement(cardExpiryElement, cardExpiryContainer, 'Card expiry');
+  mountElement(cardCvcElement, cardCvcContainer, 'Card CVC');
   
-  if (cardCvcContainer) {
-    cardCvcElement.mount(cardCvcContainer);
-    console.log('Card CVC element mounted');
-  } else {
-    console.error('Card CVC container not found');
-  }
-  
-  // Add event listener to the checkout form
+  // Set up form submission after elements are mounted
   setupCheckoutFormSubmission();
 }
 
