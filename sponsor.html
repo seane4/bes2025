@@ -622,21 +622,16 @@
             }
           }
           
-          // Create cart item
           const item = {
-            id: Date.now().toString(), // Generate unique ID
-            name: title,
+            type: 'activity',
+            title: title,
             price: price,
-            quantity: 1,
+            image: card.querySelector('.activity-image img').src,
             variant: variant
           };
           
           // Add to cart (localStorage)
           addItemToCart(item);
-          
-          // Show success message
-          showNotification(`Added "${title} - ${variant}" to cart`);
-          
           // Update cart count
           updateCartCount();
         });
@@ -650,41 +645,15 @@
       }
       
       function updateCartCount() {
-        const cart = JSON.parse(localStorage.getItem('cart')) || [];
-        const cartCountElements = document.querySelectorAll('.cart-quantity-cart');
-        cartCountElements.forEach(element => {
-          element.textContent = cart.length;
-        });
-      }
-      
-      function showNotification(message) {
-        // Create notification element if it doesn't exist
-        let notification = document.getElementById('cart-notification');
-        if (!notification) {
-          notification = document.createElement('div');
-          notification.id = 'cart-notification';
-          notification.style.position = 'fixed';
-          notification.style.bottom = '20px';
-          notification.style.right = '20px';
-          notification.style.backgroundColor = '#4CAF50';
-          notification.style.color = 'white';
-          notification.style.padding = '12px 20px';
-          notification.style.borderRadius = '4px';
-          notification.style.zIndex = '9999';
-          notification.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-          notification.style.transition = 'opacity 0.3s ease-in-out';
-          notification.style.opacity = '0';
-          document.body.appendChild(notification);
+        if (typeof updateCartDisplay === 'function') {
+          updateCartDisplay();
+        } else {
+          const cart = JSON.parse(localStorage.getItem('cart')) || [];
+          const cartCountElements = document.querySelectorAll('.cart-quantity-cart');
+          cartCountElements.forEach(element => {
+            element.textContent = cart.length;
+          });
         }
-        
-        // Set message and show notification
-        notification.textContent = message;
-        notification.style.opacity = '1';
-        
-        // Hide after 3 seconds
-        setTimeout(() => {
-          notification.style.opacity = '0';
-        }, 3000);
       }
       
       // Initialize cart count on page load
