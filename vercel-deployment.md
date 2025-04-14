@@ -80,12 +80,12 @@ Set the following environment variables in your Vercel project:
 
    ```
    # Supabase Configuration
-   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_ANON_KEY=your-anon-key
    SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
    # Stripe API Keys
-   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your-key
+   STRIPE_PUBLISHABLE_KEY=pk_test_your-key
    STRIPE_SECRET_KEY=sk_test_your-key
    STRIPE_WEBHOOK_SECRET=whsec_your-webhook-secret
 
@@ -98,8 +98,8 @@ Set the following environment variables in your Vercel project:
    EMAIL_FROM=registration@banffenergysummit.com
 
    # Site Configuration
-   NEXT_PUBLIC_SITE_URL=https://your-vercel-deployment-url.vercel.app
-   NEXT_PUBLIC_SITE_NAME=Banff Energy Summit 2025
+   SITE_URL=https://your-vercel-deployment-url.vercel.app
+   SITE_NAME=Banff Energy Summit 2025
    ```
 
 ## Setting Up Stripe Webhooks

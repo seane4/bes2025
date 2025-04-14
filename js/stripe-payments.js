@@ -323,8 +323,8 @@ async function saveOrderToSupabase(orderId, customerData, cart, totalAmount, pay
   try {
     // Initialize Supabase client
     const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || window.SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || window.SUPABASE_ANON_KEY
+      process.env.SUPABASE_URL || window.SUPABASE_URL,
+      process.env.SUPABASE_ANON_KEY || window.SUPABASE_ANON_KEY
     );
     
     // Step 1: Create customer record
@@ -421,8 +421,8 @@ async function saveOrderToSupabase(orderId, customerData, cart, totalAmount, pay
     // Log error to Supabase
     try {
       const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL || window.SUPABASE_URL,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || window.SUPABASE_ANON_KEY
+        process.env.SUPABASE_URL || window.SUPABASE_URL,
+        process.env.SUPABASE_ANON_KEY || window.SUPABASE_ANON_KEY
       );
       
       await supabase

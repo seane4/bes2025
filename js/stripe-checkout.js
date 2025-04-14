@@ -170,14 +170,14 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('updateOrderSummary called', cartItems);
     
     // Calculate subtotal from cart items
-    const subtotal = cartItems.reduce((sum, item) => {
+    let subtotal = cartItems.reduce((sum, item) => {
       const price = parseFloat(item.price) || 0;
       const quantity = parseInt(item.quantity, 10) || 1;
       return sum + (price * quantity);
     }, 0);
     
-    // Format subtotal
-    const formattedSubtotal = (subtotal / 100).toFixed(2);
+    // Format subtotal - ASSUME subtotal is already in dollars
+    const formattedSubtotal = subtotal.toFixed(2);
     if (subtotalElement) {
       subtotalElement.textContent = `$${formattedSubtotal}`;
     }
@@ -186,7 +186,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let finalTotal = subtotal;
     if (appliedDiscount) {
       if (appliedDiscount.type === 'percentage') {
-        const discountAmount = subtotal * (appliedDiscount.amount / 100);
+        // Calculate discount amount in dollars
+        const discountAmount = subtotal * (appliedDiscount.amount / 100); 
         finalTotal = Math.max(0, subtotal - discountAmount);
         
         // Add or update discount line
@@ -200,33 +201,36 @@ document.addEventListener('DOMContentLoaded', function() {
           discountLabel.className = 'text-block-3';
           discountLabel.textContent = `Discount (${appliedDiscount.code})`;
           
-          const discountAmount = document.createElement('div');
-          discountAmount.className = 'text-block-6 discount-amount';
+          const discountAmountEl = document.createElement('div'); // Renamed variable to avoid conflict
+          discountAmountEl.className = 'text-block-6 discount-amount';
           
           discountLine.appendChild(discountLabel);
-          discountLine.appendChild(discountAmount);
+          discountLine.appendChild(discountAmountEl); // Use renamed variable
           orderSummaryList.appendChild(discountLine);
         }
         
         if (discountLine) {
           const discountAmountElement = discountLine.querySelector('.discount-amount');
           if (discountAmountElement) {
-            discountAmountElement.textContent = `-$${(discountAmount / 100).toFixed(2)}`;
+            // Display discount amount in dollars
+            discountAmountElement.textContent = `-$${discountAmount.toFixed(2)}`; 
           }
         }
       }
+      // Add logic here for fixed amount discounts if needed
+      // else if (appliedDiscount.type === 'fixed') { ... }
     }
     
-    // Update total and grand total displays
-    const formattedTotal = (finalTotal / 100).toFixed(2);
+    // Update total and grand total displays - ASSUME finalTotal is in dollars
+    const formattedTotal = finalTotal.toFixed(2); 
     if (totalElement) {
       totalElement.textContent = `$${formattedTotal}`;
     }
     if (grandTotalDisplay) {
-      console.log('Setting grand total to:', formattedTotal);
+      console.log('%cupdateOrderSummary: Setting grand total to: $' + formattedTotal + ' (assuming dollars)', 'color: green; font-weight: bold;');
       grandTotalDisplay.textContent = `$${formattedTotal}`;
       
-      // Fire an event that the grand total was updated
+      // Fire an event that the grand total was updated - send dollar values
       window.dispatchEvent(new CustomEvent('grandTotalUpdated', { 
         detail: { total: finalTotal, formattedTotal: formattedTotal } 
       }));
@@ -617,7 +621,8 @@ window.updateOrderSummary = function() {
   }, 0);
   
   // Choose the appropriate total based on results
-  let formattedSubtotal = (subtotal / 100).toFixed(2);
+  // Do not change this to cents - ASSUME subtotal is already in dollars. Deleted the / 100.
+  let formattedSubtotal = subtotal.toFixed(2);
   console.log('Standard calculation (cents): $' + formattedSubtotal);
   console.log('Alternative calculation (dollars): $' + altSubtotal.toFixed(2));
   

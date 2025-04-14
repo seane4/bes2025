@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import nodemailer from 'nodemailer';
 
 // Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -220,7 +220,7 @@ function generateConfirmationEmailHtml(orderId, customerName, items, totalAmount
         
         <p>For any inquiries, please contact our team at <a href="mailto:support@banffenergysummit.com">support@banffenergysummit.com</a>.</p>
         
-        <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://banffenergysummit.com'}/my-registration" class="btn">View Your Registration</a>
+        <a href="${process.env.SITE_URL || 'https://banffenergysummit.com'}/my-registration" class="btn">View Your Registration</a>
       </div>
       <div class="footer">
         <p>&copy; 2025 Banff Energy Summit. All rights reserved.</p>

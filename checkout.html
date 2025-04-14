@@ -35,73 +35,64 @@
     document.addEventListener('DOMContentLoaded', function() {
       function calculateGrandTotal() {
         // Get cart from localStorage
-        const cart = JSON.parse(localStorage.getItem('cart')) || [];
+        // Ensure cart is an array, even if localStorage stores a single object incorrectly
+        let rawCartData = JSON.parse(localStorage.getItem('cart')) || [];
+        let cart = Array.isArray(rawCartData) ? rawCartData : [rawCartData]; // Force into array if it's not
+
+        // Filter out potentially invalid entries if cart wasn't an array initially
+        cart = cart.filter(item => item && typeof item === 'object' && item.price !== undefined);
+
         console.log('Cart items found:', cart.length);
-        console.log('Raw cart data:', JSON.stringify(cart, null, 2));
-        
+        console.log('Raw cart data used for calculation:', JSON.stringify(cart, null, 2));
+
         // Calculate total
         let total = 0;
         cart.forEach(item => {
-          const price = parseFloat(item.price) || 0;
+          // Assuming item.price is stored in cents (e.g., 18000 for $180.00)
+          const price = parseFloat(item.price) / 100 || 0; // Convert cents to dollars
           const quantity = parseInt(item.quantity, 10) || 1;
           const itemTotal = price * quantity;
           console.log(`Item: ${item.name || item.title || 'Unknown'}`);
           console.log(`  Raw price value: ${item.price} (type: ${typeof item.price})`);
-          console.log(`  Parsed price: $${(price/100).toFixed(2)}`);
+          console.log(`  Parsed price (assuming cents): $${price.toFixed(2)}`);
           console.log(`  Quantity: ${quantity}`);
-          console.log(`  Item total: $${(itemTotal/100).toFixed(2)}`);
+          console.log(`  Item total: $${itemTotal.toFixed(2)}`);
           total += itemTotal;
         });
-        
-        // Format total
-        const formattedTotal = (total / 100).toFixed(2);
-        console.log('Grand total calculated:', formattedTotal);
-        
+
+        // Format total - Now correctly assuming 'total' is in dollars after conversion
+        const formattedTotal = total.toFixed(2);
+        console.log('Grand total calculated (after converting from cents):', formattedTotal);
+
         // Update display
         const grandTotalDisplay = document.getElementById('grand-total-display');
         if (grandTotalDisplay) {
           grandTotalDisplay.textContent = '$' + formattedTotal;
-          grandTotalDisplay.style.color = '#4CAF50';
-          grandTotalDisplay.style.fontWeight = 'bold';
+          grandTotalDisplay.style.color = '#4CAF50'; // Or keep original style
+          grandTotalDisplay.style.fontWeight = 'bold'; // Or keep original style
           console.log('Grand total display updated successfully to: $' + formattedTotal);
         } else {
           console.error('Grand total display element not found');
         }
-        
-        // Special case - if cart has items but total is 0, this might indicate a price format issue
+
+        // Adjusted warning message
         if (cart.length > 0 && total === 0) {
-          console.error('WARNING: Cart has items but total is $0.00. This suggests a price format issue.');
-          console.log('First item price format:', cart[0].price);
-          
-          // Try alternative calculation method (in case prices are already in dollars)
-          let altTotal = 0;
-          cart.forEach(item => {
-            const rawPrice = parseFloat(item.price) || 0;
-            const quantity = parseInt(item.quantity, 10) || 1;
-            altTotal += rawPrice * quantity;
-          });
-          
-          console.log('Alternative total (without dividing by 100): $' + altTotal.toFixed(2));
-          
-          // If alternative total is non-zero, use it
-          if (altTotal > 0) {
-            console.log('Using alternative total calculation');
-            grandTotalDisplay.textContent = '$' + altTotal.toFixed(2);
-            grandTotalDisplay.style.color = '#4CAF50';
-            grandTotalDisplay.style.fontWeight = 'bold';
+          console.error('WARNING: Cart has items but total is $0.00. Check that item.price exists and is a non-zero number in localStorage.');
+          if(cart[0]) {
+            console.log('First item price value:', cart[0].price);
           }
         }
       }
-      
+
       // Calculate immediately
       calculateGrandTotal();
-      
+
       // Update when cart is changed
       window.addEventListener('cartUpdated', calculateGrandTotal);
-      
+
       // Expose the function globally so other scripts can call it directly
       window.calculateGrandTotal = calculateGrandTotal;
-      
+
       // Add a check button for debugging
       const debugButton = document.createElement('button');
       debugButton.textContent = 'Debug Grand Total';
@@ -116,7 +107,7 @@
       debugButton.style.zIndex = '9999';
       debugButton.addEventListener('click', function() {
         calculateGrandTotal();
-        alert('Check console for detailed cart information');
+        alert('Check console for detailed cart information and calculation steps');
       });
       document.body.appendChild(debugButton);
     });
@@ -768,17 +759,24 @@
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       const checkoutItemsList = document.getElementById('checkout-items-list');
-      
+
       function displayCheckoutItems() {
         const cart = JSON.parse(localStorage.getItem('cart')) || [];
-        
+
         if (checkoutItemsList) {
           if (cart.length === 0) {
             checkoutItemsList.innerHTML = '<div class="empty-cart-message">No items in cart</div>';
             return;
           }
-          
-          checkoutItemsList.innerHTML = cart.map(item => `
+
+          checkoutItemsList.innerHTML = cart.map(item => {
+            // Assume item.price is in dollars
+            const price = parseFloat(item.price) || 0;
+            const quantity = parseInt(item.quantity, 10) || 1;
+            // Format price - ASSUMING dollars, NO division by 100
+            const formattedPrice = price.toFixed(2); // Display price per item
+
+            return `
             <div class="w-commerce-commercecheckoutorderitem">
               <div class="checkout-item-content">
                 ${item.image ? `
@@ -789,66 +787,90 @@
                 <div class="checkout-item-details">
                   <div class="checkout-item-info">
                     <h4>${item.name || item.title}</h4>
-                    <p>Price: $${((parseFloat(item.price) || 0) / 100).toFixed(2)}</p>
+                    <p>Price: $${formattedPrice}</p> <!-- Display dollar price -->
                     <p>Quantity: ${item.quantity || 1}</p>
                   </div>
                 </div>
               </div>
             </div>
-          `).join('');
+          `}).join('');
+        } else {
+          console.warn("Element with ID 'checkout-items-list' not found.");
         }
       }
 
       displayCheckoutItems();
-      
+
       // Listen for cart updates
       window.addEventListener('cartUpdated', displayCheckoutItems);
     });
   </script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      // NOTE: These IDs might not exist if you removed the default Webflow summary
       const orderSummaryList = document.getElementById('order-summary-list');
       const subtotalElement = document.getElementById('subtotal-amount');
       const totalElement = document.getElementById('total-amount');
-      
+
       function updateOrderSummary() {
         const cart = JSON.parse(localStorage.getItem('cart')) || [];
-        
+        const filteredCart = cart.filter(item => item && typeof item === 'object' && item.price !== undefined);
+
+        console.log('%cOrderSummary: Updating summary section...', 'color: orange;');
+
         if (orderSummaryList) {
-          if (cart.length === 0) {
+          if (filteredCart.length === 0) {
             orderSummaryList.innerHTML = '<div class="empty-cart-message">No items in cart</div>';
+            // Ensure totals are zeroed out if cart is empty
+            if (subtotalElement) subtotalElement.textContent = '$0.00';
+            if (totalElement) totalElement.textContent = '$0.00';
+            console.log('%cOrderSummary: Cart empty, summary cleared.', 'color: orange;');
             return;
           }
-          
-          // Calculate subtotal
-          const subtotal = cart.reduce((sum, item) => {
-            return sum + (parseFloat(item.price) * (parseInt(item.quantity) || 1));
+
+          // Calculate subtotal - ASSUMING prices are already in dollars
+          const subtotal = filteredCart.reduce((sum, item) => {
+            const price = parseFloat(item.price) || 0;
+            const quantity = parseInt(item.quantity) || 1;
+            return sum + (price * quantity);
           }, 0);
-          
+
+          console.log(`%cOrderSummary: Calculated subtotal (assuming dollars): ${subtotal.toFixed(2)}`, 'color: orange;');
+
           // Display items
-          orderSummaryList.innerHTML = cart.map(item => `
-            <div class="w-commerce-commercecheckoutsummarylineitem">
-              <div class="text-block-3">
-                ${item.name || item.title} × ${item.quantity || 1}
-              </div>
-              <div class="text-block-6">
-                $${((parseFloat(item.price) * (parseInt(item.quantity) || 1)) / 100).toFixed(2)}
-              </div>
-            </div>
-          `).join('');
-          
-          // Update subtotal and total
+          orderSummaryList.innerHTML = filteredCart.map(item => {
+             const price = parseFloat(item.price) || 0;
+             const quantity = parseInt(item.quantity) || 1;
+             const itemTotal = price * quantity;
+             return `
+                <div class="w-commerce-commercecheckoutsummarylineitem">
+                  <div class="text-block-3">
+                    ${item.name || item.title} × ${quantity}
+                  </div>
+                  <div class="text-block-6">
+                    $${itemTotal.toFixed(2)} <!-- Display item total assuming dollars -->
+                  </div>
+                </div>
+             `;
+          }).join('');
+
+          // Update subtotal and total - ASSUMING dollars, NO division by 100
           if (subtotalElement) {
-            subtotalElement.textContent = `$${(subtotal / 100).toFixed(2)}`;
+            subtotalElement.textContent = `$${subtotal.toFixed(2)}`;
+            console.log(`%cOrderSummary: Updated subtotal display to $${subtotal.toFixed(2)}`, 'color: orange;');
           }
           if (totalElement) {
-            totalElement.textContent = `$${(subtotal / 100).toFixed(2)}`;
+            totalElement.textContent = `$${subtotal.toFixed(2)}`; // Assuming total is same as subtotal for now
+            console.log(`%cOrderSummary: Updated total display to $${subtotal.toFixed(2)}`, 'color: orange;');
           }
+        } else {
+           console.log('%cOrderSummary: orderSummaryList element not found.', 'color: orange;');
         }
       }
 
+      // Initial update
       updateOrderSummary();
-      
+
       // Listen for cart updates
       window.addEventListener('cartUpdated', updateOrderSummary);
     });
@@ -860,75 +882,48 @@
     // This is the final attempt to update the grand total
     (function() {
       console.log('%cFINAL UPDATER: Running final grand total update check', 'color: red; font-weight: bold;');
-      
-      // Get the value calculated earlier if available, or recalculate
-      const useStoredValue = window.calculatedGrandTotal;
-      
-      if (useStoredValue) {
-        console.log('%cFINAL UPDATER: Using pre-calculated value: $' + useStoredValue, 'color: green; font-weight: bold;');
-        const grandTotalDisplay = document.getElementById('grand-total-display');
-        if (grandTotalDisplay) {
-          grandTotalDisplay.textContent = '$' + useStoredValue;
-          grandTotalDisplay.style.color = '#4CAF50';
-          grandTotalDisplay.style.fontWeight = 'bold';
-        }
-        return;
-      }
-      
-      // If we don't have a stored value, calculate it directly
-      const cart = JSON.parse(localStorage.getItem('cart')) || [];
-      console.log('%cFINAL UPDATER: Recalculating from ' + cart.length + ' items', 'color: purple; font-weight: bold;');
-      
-      if (cart.length === 0) {
+
+      // Get the cart data
+      const rawCartData = JSON.parse(localStorage.getItem('cart')) || [];
+      const cart = Array.isArray(rawCartData) ? rawCartData : [rawCartData];
+      const filteredCart = cart.filter(item => item && typeof item === 'object' && item.price !== undefined);
+
+      console.log('%cFINAL UPDATER: Calculating from ' + filteredCart.length + ' items', 'color: purple; font-weight: bold;');
+
+      if (filteredCart.length === 0) {
         const grandTotalDisplay = document.getElementById('grand-total-display');
         if (grandTotalDisplay) {
           grandTotalDisplay.textContent = '$0.00';
           grandTotalDisplay.style.color = '#4CAF50';
           grandTotalDisplay.style.fontWeight = 'bold';
         }
+        console.log('%cFINAL UPDATER: Cart is empty, setting total to $0.00', 'color: orange;');
         return;
       }
-      
-      // Calculate total (trying both price formats)
-      // Method 1: Standard calculation (assuming price is in cents)
-      let total = 0;
-      cart.forEach(item => {
-        const price = parseFloat(item.price) || 0;
+
+      // Calculate total - ASSUMING prices are already in dollars
+      let totalInDollars = 0;
+      filteredCart.forEach(item => {
+        const price = parseFloat(item.price) || 0; // Assume price is dollars
         const quantity = parseInt(item.quantity, 10) || 1;
-        total += price * quantity;
-        console.log(`%cItem: ${item.name || item.title || 'Unknown'}, Price: ${item.price}, Calculated: $${(price * quantity / 100).toFixed(2)}`, 'color: blue');
+        totalInDollars += price * quantity;
+        console.log(`%cFINAL UPDATER - Item: ${item.name || item.title || 'Unknown'}, Price: ${item.price}, Calculated Item Total: $${(price * quantity).toFixed(2)}`, 'color: blue');
       });
-      
-      // Method 2: Alternative calculation (if prices are already in dollars)
-      let altTotal = 0;
-      cart.forEach(item => {
-        const price = parseFloat(item.price) || 0;
-        const quantity = parseInt(item.quantity, 10) || 1;
-        altTotal += price * quantity;
-      });
-      
-      // Choose the appropriate total based on results
-      let finalTotal = total;
-      let formattedTotal = (total / 100).toFixed(2);
-      let useAltCalculation = false;
-      
-      // If standard calculation gives zero but alt doesn't, use alt
-      if (total === 0 && altTotal > 0) {
-        finalTotal = altTotal;
-        formattedTotal = altTotal.toFixed(2);
-        useAltCalculation = true;
-        console.log('%cFINAL UPDATER: Using alternative calculation method', 'color: orange; font-weight: bold;');
-      }
-      
-      console.log(`%cFINAL UPDATER: Standard total: $${(total/100).toFixed(2)}, Alt total: $${altTotal.toFixed(2)}`, 'color: blue; font-weight: bold;');
-      console.log('%cFINAL UPDATER: Using ' + (useAltCalculation ? 'alternative' : 'standard') + ' calculation: $' + formattedTotal, 'color: green; font-weight: bold;');
-      
+
+      // Format the total (already in dollars)
+      let formattedTotal = totalInDollars.toFixed(2);
+
+      console.log('%cFINAL UPDATER: Final calculated total (assuming dollars): $' + formattedTotal, 'color: green; font-weight: bold;');
+
       // Update the display
       const grandTotalDisplay = document.getElementById('grand-total-display');
       if (grandTotalDisplay) {
         grandTotalDisplay.textContent = '$' + formattedTotal;
         grandTotalDisplay.style.color = '#4CAF50';
         grandTotalDisplay.style.fontWeight = 'bold';
+        console.log('%cFINAL UPDATER: Successfully updated display.', 'color: green;');
+      } else {
+         console.error('%cFINAL UPDATER: Grand total display element not found!', 'color: red;');
       }
     })();
   </script>
