@@ -51,7 +51,7 @@
         let total = 0;
         cart.forEach(item => {
           // Assuming item.price is stored in cents (e.g., 18000 for $180.00)
-          const price = parseFloat(item.price) / 100 || 0; // Convert cents to dollars
+          const price = parseFloat(item.price) || 0; // Convert cents to dollars
           const quantity = parseInt(item.quantity, 10) || 1;
           const itemTotal = price * quantity;
           console.log(`Item: ${item.name || item.title || 'Unknown'}`);
