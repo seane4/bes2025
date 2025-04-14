@@ -636,7 +636,7 @@ document.addEventListener('DOMContentLoaded', function() {
   updateNavigation();
 
   // Initialize Stripe
-  const stripe = Stripe('pk_test_51R4RcN2MXwfL6XiwkmmrM5kUfwRuCQqZm3nUgDHlvLA6Am1KpQBEUVpopAn0vl42z1waaJqWyZkPWZm3XY2ccZCh00Hgm3h78X');
+  const stripe = Stripe(window.ENV.STRIPE.PUBLISHABLE_KEY);
 });
 
 // Initialize the booking form
@@ -1745,4 +1745,4 @@ if (window.initCheckoutPage) {
       console.error('Checkout bridge - Main initCheckoutPage still not found after page load');
     }
   });
-} 
+}

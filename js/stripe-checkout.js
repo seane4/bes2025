@@ -15,7 +15,7 @@ const stripe = Stripe(window.ENV.STRIPE.PUBLISHABLE_KEY);
   });
   
   // Format total
-  const formattedTotal = (total / 100).toFixed(2);
+  const formattedTotal = total.toFixed(2);
   
   // Update display when DOM is available
   if (document.readyState === 'loading') {
