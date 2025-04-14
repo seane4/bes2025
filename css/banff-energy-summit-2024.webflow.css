@@ -8541,7 +8541,7 @@ blockquote {
   background-color: #f9f9f9;
   padding: 25px;
   border-radius: 10px;
-  margin: 0 30px 30px;
+  /* margin: 0 30px 30px; */
 }
 
 .booking-form {
@@ -9041,5 +9041,132 @@ blockquote {
   max-width: 700px;
   margin: 0 auto 30px;
 }
+
+/* ... other event-table styles ... */
+
+.event-table td:nth-child(6), /* Selects the 6th table data cell in each row */
+.event-table th:nth-child(6) { /* Selects the 6th table header cell */
+  width: 8%; /* Keeps the width adjustment */
+  text-align: center; /* This centers the text horizontally */
+}
+
+/* ... rest of the CSS ... */
+
+/* Agenda Section Styling */
+.agenda-section {
+  padding-top: 60px;    /* Adds space ABOVE the "Event Itinerary" heading */
+  padding-bottom: 80px; /* Adds MORE space BELOW the table */
+  margin-top: 40px;     /* Optional: Separates from content above */
+  margin-bottom: 40px;  /* Optional: Separates from content below */
+  box-sizing: border-box; /* Ensures padding is included in element dimensions */
+}
+
+/* Ensure the container allows sufficient width */
+.container {
+    max-width: 1140px; /* Example: Adjust if your container is narrower */
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 15px; /* Add some side padding to the container */
+    padding-right: 15px;
+}
+
+/* Event Table Styling */
+.event-table {
+  width: 100%; /* Crucial: Makes table use the full width of .container */
+  border-collapse: collapse;
+  margin-top: 30px;
+  margin-bottom: 30px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 16px;
+  line-height: 1.6; /* Slightly increased line height for readability */
+  color: #333;
+  table-layout: auto; /* Let browser determine column widths based on content unless specified */
+  border: 1px solid #ddd; /* Add an outer border to the table */
+}
+
+.event-table th,
+.event-table td {
+  border: 1px solid #ddd;
+  padding: 15px 18px; /* Increased padding inside cells for more space */
+  text-align: center;
+  vertical-align: top;
+}
+
+.event-table th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  vertical-align: middle; /* Vertically center header text */
+}
+
+/* Specific column adjustments */
+.event-table td:nth-child(1), /* Date */
+.event-table th:nth-child(1) {
+  width: 18%; /* Adjusted width */
+}
+
+.event-table td:nth-child(2), /* Time */
+.event-table th:nth-child(2) {
+  width: 15%;
+  white-space: nowrap;
+}
+
+/* Event and Function Space will take remaining width */
+
+.event-table td:nth-child(5), /* Setup Style */
+.event-table th:nth-child(5) {
+    width: 12%; /* Adjusted width */
+}
+
+
+.event-table td:nth-child(6), /* ATT. */
+.event-table th:nth-child(6) {
+  width: 8%;
+  text-align: center; /* Keep centered */
+  vertical-align: middle; /* Center numbers vertically too */
+}
+
+/* Style rows for better readability */
+.event-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.event-table tbody tr:hover {
+  background-color: #f1f1f1;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 991px) { /* Adjust breakpoint if needed */
+    .event-table {
+        font-size: 15px;
+    }
+     .event-table th,
+     .event-table td {
+        padding: 12px 10px; /* Reduce padding slightly */
+     }
+}
+
+
+@media screen and (max-width: 767px) {
+  .event-table th,
+  .event-table td {
+    padding: 10px 8px;
+    font-size: 14px;
+  }
+  .event-table th {
+    font-size: 12px;
+  }
+  /* Consider making the table scroll horizontally on small screens */
+  .agenda-section {
+      overflow-x: auto; /* Add horizontal scroll to the section if table overflows */
+  }
+  .event-table {
+      min-width: 600px; /* Ensure table has a minimum width before scrolling */
+  }
+}
+
+/* ... existing styles ... */
 
 
