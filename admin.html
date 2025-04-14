@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <!-- Materialize Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Materialize CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <!-- Your Custom Styles (optional, load after framework) -->
+    <!-- <link rel="stylesheet" href="css/style.css"> -->
+    <style>
+        /* Add custom overrides or styles here if needed */
+        body {
+            display: flex;
+            min-height: 100vh;
+            flex-direction: column;
+            background-color: #f4f4f4; /* Light grey background */
+        }
+        main {
+            flex: 1 0 auto;
+            padding-top: 20px;
+        }
+        .card {
+            margin-top: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+        .error-message {
+            color: #f44336; /* Material Design red */
+            margin-top: 10px;
+        }
+        .preloader-wrapper {
+            margin: 20px auto;
+            display: block; /* Center the loader */
+        }
+        #logout-button {
+            margin-top: 0; /* Adjust as needed */
+            margin-bottom: 20px;
+        }
+        /* Center login card */
+        #login-section .card {
+             max-width: 500px;
+             margin-left: auto;
+             margin-right: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="nav-wrapper teal"> 
+            <a href="#" class="brand-logo center">Admin Dashboard</a>
+        </div>
+    </nav>
+
+    <main class="container">
+
+        <!-- Login Section -->
+        <div id="login-section">
+             <div class="card">
+                 <div class="card-content">
+                    <span class="card-title">Admin Login</span>
+                    <form id="login-form">
+                        <div class="input-field">
+                            <i class="material-icons prefix">email</i>
+                            <input type="email" id="email" name="email" class="validate" required>
+                            <label for="email">Email</label>
+                        </div>
+                        <div class="input-field">
+                            <i class="material-icons prefix">lock</i>
+                            <input type="password" id="password" name="password" class="validate" required>
+                            <label for="password">Password</label>
+                        </div>
+                        <button type="submit" class="btn waves-effect waves-light teal right">Login <i class="material-icons right">send</i></button>
+                        <div class="clearfix"></div>
+                    </form>
+                    <p id="login-error" class="error-message hidden"></p>
+                 </div>
+             </div>
+        </div>
+
+        <!-- Logged In Content Area (Orders & Customers) -->
+        <div id="admin-content-section" class="hidden">
+            <button id="logout-button" class="btn waves-effect waves-light red right">Logout <i class="material-icons right">exit_to_app</i></button>
+            <div class="clearfix"></div>
+
+            <!-- Orders Section -->
+            <div id="orders-section" class="card">
+                <div class="card-content">
+                    <span class="card-title">Customer Orders</span>
+                    <div id="loading-orders-message" class="center-align">
+                         <div class="preloader-wrapper small active">
+                            <div class="spinner-layer spinner-blue-only">
+                              <div class="circle-clipper left">
+                                <div class="circle"></div>
+                              </div><div class="gap-patch">
+                                <div class="circle"></div>
+                              </div><div class="circle-clipper right">
+                                <div class="circle"></div>
+                              </div>
+                            </div>
+                          </div>
+                          <p>Loading orders...</p>
+                    </div>
+                    <p id="orders-error" class="error-message hidden center-align"></p>
+                    <table id="orders-table" class="striped highlight responsive-table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Order Date</th>
+                                <th>Customer Email</th>
+                                <th>Total Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orders-tbody">
+                            <!-- Order rows will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Customers Section -->
+            <div id="customers-section" class="card">
+                 <div class="card-content">
+                    <span class="card-title">Customers</span>
+                     <div id="loading-customers-message" class="center-align">
+                         <div class="preloader-wrapper small active">
+                            <div class="spinner-layer spinner-green-only">
+                              <div class="circle-clipper left">
+                                <div class="circle"></div>
+                              </div><div class="gap-patch">
+                                <div class="circle"></div>
+                              </div><div class="circle-clipper right">
+                                <div class="circle"></div>
+                              </div>
+                            </div>
+                          </div>
+                          <p>Loading customers...</p>
+                    </div>
+                    <p id="customers-error" class="error-message hidden center-align"></p>
+                    <table id="customers-table" class="striped highlight responsive-table">
+                        <thead>
+                            <tr>
+                                <th>Customer ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Joined Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customers-tbody">
+                            <!-- Customer rows will be inserted here -->
+                        </tbody>
+                    </table>
+                 </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Materialize JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <!-- Include Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Include Environment Config -->
+    <script src="js/env-config.js"></script>
+    <!-- Include Admin Logic Script -->
+    <script src="js/admin.js"></script>
+    <script>
+        // Initialize Materialize components (if any are used that need it)
+        // M.AutoInit(); // General initializer, might not be needed for just tables/forms/buttons
+    </script>
+
+</body>
+</html> 
