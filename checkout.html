@@ -692,6 +692,7 @@
     document.addEventListener('DOMContentLoaded', function() {
       // Initialize Stripe
       const stripe = Stripe(window.STRIPE_PUBLISHABLE_KEY);
+
       const elements = stripe.elements();
 
       // Create and mount the Stripe Elements
