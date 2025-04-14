@@ -28,6 +28,8 @@
   <script src="https://js.stripe.com/v3/"></script>
   <script src="js/env-config.js"></script>
   <script src="js/stripe-checkout.js" defer></script>
+  <script src="js/stripe-payments.js" defer></script>
+  <script src="js/stripe-test.js" defer></script>
   <!-- Simple Cart Total Calculator -->
   <script>
     // This single script will calculate and display the grand total
@@ -689,7 +691,7 @@
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       // Initialize Stripe
-      const stripe = Stripe('your_publishable_key'); // Replace with your actual publishable key
+      const stripe = Stripe(window.STRIPE_PUBLISHABLE_KEY);
       const elements = stripe.elements();
 
       // Create and mount the Stripe Elements

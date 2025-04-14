@@ -714,6 +714,10 @@ function initBookingForm() {
       cart.push(booking);
       localStorage.setItem('cart', JSON.stringify(cart));
       
+      // Calculate and store the total
+      let cartTotal = parseFloat(total.replace(/[^0-9.-]+/g, '')) || 0;
+      localStorage.setItem('cartTotal', cartTotal.toFixed(2));
+      
       // Update cart display
       updateCartDisplay();
       
@@ -1185,6 +1189,7 @@ function removeCartItem(index) {
   let cart = JSON.parse(localStorage.getItem('cart')) || [];
   
   if (index >= 0 && index < cart.length) {
+    // Remove the item
     cart.splice(index, 1);
     localStorage.setItem('cart', JSON.stringify(cart));
     updateCartDisplay();
