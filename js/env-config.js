@@ -3,7 +3,7 @@ const ENV = {
   // Stripe Configuration
   STRIPE: {
     // Replace this with your actual Stripe publishable key
-    PUBLISHABLE_KEY: 'pk_test_51O4La8JN3tVTvIK71234567890abcdefghijklmnopqrstuvwxyz',
+    PUBLISHABLE_KEY: 'pk_test_51RDJNnCmQWfCgIYUttuWdIatviUpU6X0FCmX6nnIgHq0ExkwbrK1ZYb2QG2S9FlZVqYyUxuMaFy0yehnc62OsEnD00NBJr7cPP',
     
     // API endpoints
     ENDPOINTS: {
@@ -31,6 +31,9 @@ window.ENV = ENV;
   // Site URL
   window.SITE_URL = window.location.origin;
 
-  console.log('Environment configuration loaded');
+  // Debug Stripe key
+  console.log('Stripe key length:', window.ENV.STRIPE.PUBLISHABLE_KEY.length);
+  console.log('Stripe key starts with:', window.ENV.STRIPE.PUBLISHABLE_KEY.substring(0, 4));
+  console.log('Stripe key ends with:', window.ENV.STRIPE.PUBLISHABLE_KEY.substring(window.ENV.STRIPE.PUBLISHABLE_KEY.length - 4));
   console.log('Stripe key configured:', !!window.ENV.STRIPE.PUBLISHABLE_KEY);
-})(); 
+})();

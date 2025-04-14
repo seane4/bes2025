@@ -28,6 +28,8 @@
   <script src="https://js.stripe.com/v3/"></script>
   <script src="js/env-config.js"></script>
   <script src="js/stripe-checkout.js" defer></script>
+  <script src="js/stripe-payments.js" defer></script>
+  <script src="js/stripe-test.js" defer></script>
   <!-- Simple Cart Total Calculator -->
   <script>
     // This single script will calculate and display the grand total
@@ -49,7 +51,7 @@
         let total = 0;
         cart.forEach(item => {
           // Assuming item.price is stored in cents (e.g., 18000 for $180.00)
-          const price = parseFloat(item.price) / 100 || 0; // Convert cents to dollars
+          const price = parseFloat(item.price) || 0; // Convert cents to dollars
           const quantity = parseInt(item.quantity, 10) || 1;
           const itemTotal = price * quantity;
           console.log(`Item: ${item.name || item.title || 'Unknown'}`);
@@ -689,7 +691,8 @@
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       // Initialize Stripe
-      const stripe = Stripe(pk_test_51RDJNnCmQWfCgIYUttuWdIatviUpU6X0FCmX6nnIgHq0ExkwbrK1ZYb2QG2S9FlZVqYyUxuMaFy0yehnc62OsEnD00NBJr7cPP); // Replace with your actual publishable key
+      const stripe = Stripe(window.STRIPE_PUBLISHABLE_KEY);
+
       const elements = stripe.elements();
 
       // Create and mount the Stripe Elements

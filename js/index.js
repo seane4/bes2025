@@ -636,7 +636,7 @@ document.addEventListener('DOMContentLoaded', function() {
   updateNavigation();
 
   // Initialize Stripe
-  const stripe = Stripe('pk_test_51R4RcN2MXwfL6XiwkmmrM5kUfwRuCQqZm3nUgDHlvLA6Am1KpQBEUVpopAn0vl42z1waaJqWyZkPWZm3XY2ccZCh00Hgm3h78X');
+  const stripe = Stripe(window.ENV.STRIPE.PUBLISHABLE_KEY);
 });
 
 // Initialize the booking form
@@ -713,6 +713,10 @@ function initBookingForm() {
       let cart = JSON.parse(localStorage.getItem('cart')) || [];
       cart.push(booking);
       localStorage.setItem('cart', JSON.stringify(cart));
+      
+      // Calculate and store the total
+      let cartTotal = parseFloat(total.replace(/[^0-9.-]+/g, '')) || 0;
+      localStorage.setItem('cartTotal', cartTotal.toFixed(2));
       
       // Update cart display
       updateCartDisplay();
@@ -1185,6 +1189,7 @@ function removeCartItem(index) {
   let cart = JSON.parse(localStorage.getItem('cart')) || [];
   
   if (index >= 0 && index < cart.length) {
+    // Remove the item
     cart.splice(index, 1);
     localStorage.setItem('cart', JSON.stringify(cart));
     updateCartDisplay();
@@ -1740,4 +1745,4 @@ if (window.initCheckoutPage) {
       console.error('Checkout bridge - Main initCheckoutPage still not found after page load');
     }
   });
-} 
+}

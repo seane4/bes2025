@@ -15,7 +15,7 @@ const stripe = Stripe(window.ENV.STRIPE.PUBLISHABLE_KEY);
   });
   
   // Format total
-  const formattedTotal = (total / 100).toFixed(2);
+  const formattedTotal = total.toFixed(2);
   
   // Update display when DOM is available
   if (document.readyState === 'loading') {
@@ -292,7 +292,9 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
       // Get cart data
       const cartTotal = getCartTotal();
+      console.log('cartTotal:', cartTotal);
       const cartItems = getCartItems();
+      console.log('cartItems:', cartItems);
 
       if (cartTotal === 0 || cartItems.length === 0) {
         showError('Your cart is empty. Please add items before proceeding.');
