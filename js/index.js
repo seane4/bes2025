@@ -459,7 +459,7 @@ document.addEventListener('DOMContentLoaded', function() {
       font-size: 16px;
       line-height: 1.5;
       color: #666;
-      margin-bottom: 24px;
+      
     }
 
     @media screen and (max-width: 767px) {
@@ -713,10 +713,12 @@ function initBookingForm() {
       let cart = JSON.parse(localStorage.getItem('cart')) || [];
       cart.push(booking);
       localStorage.setItem('cart', JSON.stringify(cart));
+      console.log('Raw total value:', total);
       
       // Calculate and store the total
       let cartTotal = parseFloat(total.replace(/[^0-9.-]+/g, '')) || 0;
       localStorage.setItem('cartTotal', cartTotal.toFixed(2));
+      console.log('cartTotal set to:', localStorage.getItem('cartTotal'));
       
       // Update cart display
       updateCartDisplay();

@@ -468,7 +468,6 @@ document.addEventListener('DOMContentLoaded', function() {
       font-size: 16px;
       line-height: 1.5;
       color: #666;
-      margin-bottom: 24px;
     }
 
     @media screen and (max-width: 767px) {
