@@ -295,8 +295,8 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log('cartTotal:', cartTotal);
       const cartItems = getCartItems();
       console.log('cartItems:', cartItems);
-
-      if (cartTotal === 0 || cartItems.length === 0) {
+      //Remove this for now to work on Stripe integration 
+      if ( cartItems.length === 0) {
         showError('Your cart is empty. Please add items before proceeding.');
         return;
       }
@@ -322,14 +322,13 @@ document.addEventListener('DOMContentLoaded', function() {
             name: document.getElementById('billing-name').value,
             email: document.getElementById('billing-email').value,
             shipping: {
-              name: document.querySelector('[name="primary_name"]').value,
+              name: document.getElementById('billing-name').value,
               address: {
-                line1: document.querySelector('[name="address_line1"]').value,
-                line2: document.querySelector('[name="address_line2"]').value,
-                city: document.querySelector('[name="city"]').value,
-                state: document.querySelector('[name="state"]').value,
-                postal_code: document.querySelector('[name="zip"]').value,
-                country: document.querySelector('[name="country"]').value
+                line1: document.getElementById('billing-address').value,
+                city: document.getElementById('billing-city').value,
+                state: document.getElementById('billing-state').value,
+                postal_code: document.getElementById('billing-zip').value,
+                country: document.getElementById('billing-country').value
               }
             }
           }
@@ -370,15 +369,18 @@ document.addEventListener('DOMContentLoaded', function() {
           payment_intent_id: paymentIntent.id,
           amount: paymentIntent.amount,
           customer_info: {
-            name: document.querySelector('[name="primary_name"]').value,
-            email: document.querySelector('[name="email"]').value,
-            phone: document.querySelector('[name="primary_phone"]').value,
-            shirt_size: document.querySelector('[name="primary_shirt_size"]').value,
-            spouse_name: document.querySelector('[name="spouse_name"]').value,
-            spouse_shirt_size: document.querySelector('[name="spouse_shirt_size"]').value,
-            additional_guest_name: document.querySelector('[name="additional_guest_name"]').value,
-            additional_guest_shirt_size: document.querySelector('[name="additional_guest_shirt_size"]').value,
-            special_requirements: document.getElementById('special_requirements').value
+            name: document.getElementById('billing-name').value,
+            email: document.getElementById('billing-email').value,
+            shipping: {
+              name: document.getElementById('billing-name').value,
+              address: {
+                line1: document.getElementById('billing-address').value,
+                city: document.getElementById('billing-city').value,
+                state: document.getElementById('billing-state').value,
+                postal_code: document.getElementById('billing-zip').value,
+                country: document.getElementById('billing-country').value
+              }
+            }
           },
           items: cartItems
         };
