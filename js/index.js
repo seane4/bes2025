@@ -715,14 +715,10 @@ function initBookingForm() {
       localStorage.setItem('cart', JSON.stringify(cart));
       console.log('Raw total value:', total);
       
-      // Calculate and store the total as a string
+      // Calculate and store the total
       let cartTotal = parseFloat(total.replace(/[^0-9.-]+/g, '')) || 0;
-<<<<<<< HEAD
       localStorage.setItem('cartTotal', cartTotal.toFixed(2));
       console.log('cartTotal set to:', localStorage.getItem('cartTotal'));
-=======
-      localStorage.setItem('cartTotal', String(cartTotal.toFixed(2)));
->>>>>>> 9cc39a0900e9240e340145da456884eaac10b4e4
       
       // Update cart display
       updateCartDisplay();
