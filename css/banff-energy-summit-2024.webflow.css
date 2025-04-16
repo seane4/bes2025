@@ -2816,7 +2816,6 @@ blockquote {
   z-index: 3;
   background-image: linear-gradient(153deg, #0c1526, #10263d);
   border-radius: 12px 0 0 12px;
-  flex-flow: column-reverse;
   justify-content: space-between;
   align-items: flex-start;
   width: 100%;
