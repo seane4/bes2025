@@ -261,237 +261,73 @@ function setupCheckoutFormSubmission() {
 }
 
 async function processPayment(customerData, cart, totalAmount) {
+  // Note: totalAmount calculated client-side is NO LONGER USED for payment creation.
+  // It might still be useful for displaying to the user before they click "Pay".
+  // Ensure any display correctly formats cents to dollars (e.g., totalAmount / 100).
   try {
-    // Create a PaymentMethod using the card element
+    // 1. Create PaymentMethod (still needed for card details)
     const paymentMethodResult = await stripe.createPaymentMethod({
       type: 'card',
       card: cardNumberElement,
       billing_details: {
         name: customerData.primaryName,
         email: customerData.email,
-        phone: customerData.phone,
-        address: customerData.address
+        // Include other details if needed by Stripe/your setup
+        // phone: customerData.phone,
+        // address: customerData.address // Often collected by Stripe Elements Link/Payment Element
       }
     });
     
     if (paymentMethodResult.error) {
+      console.error("PaymentMethod creation error:", paymentMethodResult.error);
       return { success: false, error: paymentMethodResult.error.message };
     }
-    
-    // Use the payment method ID to create a payment intent directly with Stripe
-    // In a production environment, this should be done on the server-side for security
-    // For this implementation, we'll create a direct charge using the payment method
-    
-    // This is a client-side approach only for demo purposes
-    // In production, you should use Stripe's server-side SDKs
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(totalAmount * 100), // amount in cents
-      currency: 'usd',
-      payment_method: paymentMethodResult.paymentMethod.id,
-      confirm: true,
-      return_url: window.location.origin + '/checkout-success.html'
-    });
-    
-    if (paymentIntent.error) {
-      return { success: false, error: paymentIntent.error.message };
-    }
-    
-    // If payment is successful, save order to Supabase
-    const orderId = 'order_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
-    const orderResult = await saveOrderToSupabase(orderId, customerData, cart, totalAmount, paymentMethodResult.paymentMethod.id);
-    
-    if (!orderResult.success) {
-      console.error('Error saving order to Supabase:', orderResult.error);
-      // Still consider payment successful if Stripe payment went through
-      return { success: true, orderId: orderId };
-    }
-    
-    // Send confirmation email using Supabase Edge Function
-    await sendOrderConfirmationEmail(customerData, orderId, cart, totalAmount);
-    
-    return { success: true, orderId: orderId };
-  } catch (error) {
-    console.error('Error processing payment:', error);
-    return { success: false, error: error.message };
-  }
-}
+    const paymentMethodId = paymentMethodResult.paymentMethod.id;
 
-// Save order data to Supabase
-async function saveOrderToSupabase(orderId, customerData, cart, totalAmount, paymentMethodId) {
-  console.log('Saving order to Supabase:', orderId);
-  
-  try {
-    // Initialize Supabase client
-    const supabase = createClient(
-      process.env.SUPABASE_URL || window.SUPABASE_URL,
-      process.env.SUPABASE_ANON_KEY || window.SUPABASE_ANON_KEY
-    );
-    
-    // Step 1: Create customer record
-    const { data: customerRecord, error: customerError } = await supabase
-      .from('customers')
-      .insert([
-        {
-          email: customerData.email,
-          name: customerData.primaryName,
-          phone: customerData.phone,
-          address_line1: customerData.address.line1,
-          address_line2: customerData.address.line2,
-          city: customerData.address.city,
-          state: customerData.address.state,
-          postal_code: customerData.address.postal_code,
-          country: customerData.address.country,
-          shirt_size: customerData.shirtSize,
-          spouse_name: customerData.spouseName,
-          spouse_shirt_size: customerData.spouseShirtSize,
-          additional_guest_name: customerData.additionalGuestName,
-          additional_guest_shirt_size: customerData.additionalGuestShirtSize,
-          special_requirements: customerData.specialRequirements
-        }
-      ])
-      .select('id')
-      .single();
-      
-    if (customerError) {
-      throw new Error(`Error creating customer record: ${customerError.message}`);
-    }
-    
-    // Step 2: Create order record
-    const { data: orderRecord, error: orderError } = await supabase
-      .from('orders')
-      .insert([
-        {
-          order_id: orderId,
-          customer_id: customerRecord.id,
-          subtotal: calculateSubtotal(cart),
-          tax: calculateTax(cart),
-          total: totalAmount,
-          payment_method: 'stripe',
-          transaction_id: paymentMethodId,
-          status: 'completed'
-        }
-      ])
-      .select('id')
-      .single();
-      
-    if (orderError) {
-      throw new Error(`Error creating order record: ${orderError.message}`);
-    }
-    
-    // Step 3: Create order items
-    const orderItems = cart.map(item => ({
-      order_id: orderRecord.id,
-      item_type: item.type,
-      item_id: item.id,
-      item_name: item.name,
-      quantity: item.quantity || 1,
-      price: item.price,
-      total: item.price * (item.quantity || 1)
-    }));
-    
-    const { error: itemsError } = await supabase
-      .from('order_items')
-      .insert(orderItems);
-      
-    if (itemsError) {
-      throw new Error(`Error creating order items: ${itemsError.message}`);
-    }
-    
-    // Step 4: Log the payment event
-    await supabase
-      .from('payment_logs')
-      .insert([
-        {
-          order_id: orderId,
-          transaction_id: paymentMethodId,
-          event_type: 'payment_succeeded',
-          event_data: {
-            paymentMethod: 'stripe',
-            amount: totalAmount,
-            customer: customerData.email
-          }
-        }
-      ]);
-    
-    console.log('Order saved successfully to Supabase');
-    return { success: true, customerId: customerRecord.id, orderId: orderRecord.id };
-  } catch (error) {
-    console.error('Error saving order to Supabase:', error);
-    
-    // Log error to Supabase
-    try {
-      const supabase = createClient(
-        process.env.SUPABASE_URL || window.SUPABASE_URL,
-        process.env.SUPABASE_ANON_KEY || window.SUPABASE_ANON_KEY
-      );
-      
-      await supabase
-        .from('payment_logs')
-        .insert([
-          {
-            order_id: orderId,
-            event_type: 'error_saving_order',
-            event_data: {
-              error: error.message,
-              customer: customerData.email
-            }
-          }
-        ]);
-    } catch (logError) {
-      console.error('Failed to log error:', logError);
-    }
-    
-    return { success: false, error: error.message };
-  }
-}
+    // 2. Call your backend to create the Payment Intent
+    // Prepare only the necessary data: item IDs and quantities.
+    const cartForServer = cart.map(item => ({ id: item.id, quantity: item.quantity || 1 }));
 
-// Send confirmation email using Supabase Edge Function
-async function sendOrderConfirmationEmail(customerData, orderId, cart, totalAmount) {
-  console.log('Sending order confirmation email via Vercel API endpoint');
-  
-  try {
-    // Call the Vercel API endpoint instead of Supabase Edge Function
-    const response = await fetch('/api/send-confirmation-email', {
+    const response = await fetch('/api/create-payment-intent', { // Ensure this path is correct
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        orderId: orderId
-      })
+      body: JSON.stringify({ cart: cartForServer, customerEmail: customerData.email }),
     });
-    
-    const result = await response.json();
-    
-    if (!result.success) {
-      console.error('Error sending confirmation email:', result.error);
-      return { success: false, error: result.error };
+
+    const paymentIntentData = await response.json();
+
+    if (!response.ok || paymentIntentData.error) {
+      console.error("Error fetching client secret:", paymentIntentData.error || response.statusText);
+      return { success: false, error: paymentIntentData.error || 'Failed to initialize payment.' };
     }
-    
-    console.log('Email sent successfully');
-    return { success: true };
+
+    // 3. Confirm the Payment Intent on the client using the clientSecret from the server
+    const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
+      paymentIntentData.clientSecret, // The client secret returned by your backend
+      {
+        payment_method: paymentMethodId, // Attach the payment method collected
+      }
+    );
+
+    if (confirmError) {
+      // Handle errors like insufficient funds, card declined, etc.
+      console.error('Stripe payment confirmation error:', confirmError);
+      return { success: false, error: confirmError.message };
+    }
+
+    // 4. Payment successful! Redirect or show success message.
+    // Order saving and email sending are now handled by the webhook.
+    console.log('PaymentIntent confirmed successfully:', paymentIntent);
+    // You might redirect to a success page, passing the paymentIntent.id if needed
+    // e.g., window.location.href = `/checkout-success.html?payment_intent=${paymentIntent.id}`;
+    return { success: true, paymentIntentId: paymentIntent.id };
+
   } catch (error) {
-    console.error('Failed to send confirmation email:', error);
-    // Don't block the user flow due to email sending failure
+    console.error('Error processing payment:', error);
     return { success: false, error: error.message };
   }
-}
-
-// Helper function to calculate subtotal
-function calculateSubtotal(cart) {
-  return cart.reduce((total, item) => {
-    if (item.type === 'activity') {
-      return total + parseFloat(item.price);
-    } else {
-      return total + parseFloat(item.total);
-    }
-  }, 0);
-}
-
-// Helper function to calculate tax
-function calculateTax(cart) {
-  const subtotal = calculateSubtotal(cart);
-  return subtotal * 0.05; // 5% tax
 }
 
 function validateCustomerForm() {
@@ -677,4 +513,8 @@ function showPaymentSuccessMessage(customerData, cart, total, orderId) {
     }
   `;
   document.head.appendChild(styleSheet);
-} 
+}
+
+// In your cart display logic
+const displayTotal = (cartTotalInCents / 100).toFixed(2);
+document.getElementById('grand-total-display').textContent = `$${displayTotal}`; 

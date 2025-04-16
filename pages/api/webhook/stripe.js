@@ -23,20 +23,22 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 const CUSTOMERS_TABLE = 'customers'; // Your customers table
 const ORDERS_TABLE = 'orders';       // Your orders table
 const ORDER_ITEMS_TABLE = 'order_items'; // Your order items table
+const ACTIVITIES_TABLE = 'activities'; // Added for reference if needed later
 
 const CUSTOMER_PK_COLUMN = 'id'; // Primary key of your customers table (e.g., 'id')
-const CUSTOMER_STRIPE_ID_COLUMN = 'stripe_customer_id'; // Column storing Stripe Customer ID in your customers table
+const CUSTOMER_EMAIL_COLUMN = 'email'; // Column for customer email
+const CUSTOMER_STRIPE_ID_COLUMN = 'stripe_customer_id'; // Column storing Stripe Customer ID
 
 const ORDER_PK_COLUMN = 'id'; // Primary key of your orders table (e.g., 'id')
 const ORDER_CUSTOMER_FK_COLUMN = 'customer_id'; // Foreign key in orders linking to customers table PK
 const ORDER_STRIPE_PI_ID_COLUMN = 'stripe_payment_intent_id'; // Column storing Stripe Payment Intent ID
-const ORDER_AMOUNT_COLUMN = 'amount'; // Column for total order amount (e.g., numeric)
+const ORDER_AMOUNT_COLUMN = 'amount'; // Column for total order amount IN CENTS (integer)
 const ORDER_CURRENCY_COLUMN = 'currency'; // Column for currency (e.g., text)
 const ORDER_STATUS_COLUMN = 'status'; // Column for order status (e.g., text)
 
 const ORDER_ITEM_ORDER_FK_COLUMN = 'order_id'; // Foreign key in order_items linking to orders table PK
-const ORDER_ITEM_PRODUCT_FK_COLUMN = 'product_id'; // Foreign key in order_items linking to products table PK (adjust if needed)
-const ORDER_ITEM_QUANTITY_COLUMN = 'quantity'; // Column for item quantity
+const ORDER_ITEM_PRODUCT_FK_COLUMN = 'product_id'; // Foreign key in order_items linking to activities table PK
+const ORDER_ITEM_QUANTITY_COLUMN = 'quantity'; // Column for quantity
 // Optional: Add a column for price_at_purchase if you store it in metadata or fetch it
 // const ORDER_ITEM_PRICE_COLUMN = 'price_at_purchase';
 // --- End of Schema Definitions ---
@@ -80,168 +82,208 @@ export default async function handler(req, res) {
   }
 }
 
-/**
- * Handle successful payment intents
- */
-async function handlePaymentSucceeded(paymentIntent) {
-  console.log('Handling payment_intent.succeeded...');
-
-  // 1. Extract Data from PaymentIntent
-  const stripePaymentIntentId = paymentIntent.id;
-  const stripeCustomerId = paymentIntent.customer; // Stripe Customer ID
-  const amountReceived = paymentIntent.amount_received / 100; // Amount in DOLLARS
-  const currency = paymentIntent.currency;
-  const customerEmail = paymentIntent.receipt_email || paymentIntent.customer?.email; // Get email if available
-  const metadata = paymentIntent.metadata; // Retrieve metadata if you stored cart info
-
-  console.log(`  PI ID: ${stripePaymentIntentId}, Stripe Cust ID: ${stripeCustomerId}, Amount: ${amountReceived} ${currency}, Email: ${customerEmail}`);
-  console.log(`  Metadata: ${JSON.stringify(metadata)}`);
-
-  // Prevent duplicate processing (optional but recommended)
-  const { data: existingOrder, error: checkError } = await supabase
-    .from(ORDERS_TABLE)
-    .select(ORDER_PK_COLUMN)
-    .eq(ORDER_STRIPE_PI_ID_COLUMN, stripePaymentIntentId)
-    .maybeSingle(); // Use maybeSingle to not throw error if not found
-
-  if (checkError) {
-    console.error('  Error checking for existing order:', checkError);
-    throw new Error(`Database error checking order: ${checkError.message}`); // Let the main handler catch this
-  }
-  if (existingOrder) {
-    console.log(`  Order for PaymentIntent ${stripePaymentIntentId} already exists (ID: ${existingOrder[ORDER_PK_COLUMN]}). Skipping.`);
-    return; // Exit successfully, already processed
+// --- Helper Function: Find or Create Customer ---
+async function findOrCreateCustomer(stripeCustomerId, customerEmail) {
+  if (!stripeCustomerId && !customerEmail) {
+    console.warn('Cannot find or create customer without Stripe Customer ID or Email.');
+    // Decide how to handle this - maybe create an order without a customer?
+    // Or throw an error if customer is mandatory.
+    // For now, returning null, assuming orders might allow null customer_id
+    return null;
   }
 
-  // 2. Find or Create Customer in Supabase
-  let supabaseCustomerId = null;
+  let query = supabase.from(CUSTOMERS_TABLE);
+
+  // Prefer lookup by Stripe Customer ID if available
   if (stripeCustomerId) {
-    // Try finding by Stripe Customer ID first
-    const { data: customer, error: findError } = await supabase
-      .from(CUSTOMERS_TABLE)
-      .select(CUSTOMER_PK_COLUMN) // Select the primary key
-      .eq(CUSTOMER_STRIPE_ID_COLUMN, stripeCustomerId)
+    query = query.select(`${CUSTOMER_PK_COLUMN}, ${CUSTOMER_STRIPE_ID_COLUMN}`)
+                 .eq(CUSTOMER_STRIPE_ID_COLUMN, stripeCustomerId)
+                 .maybeSingle();
+  } else {
+    // Fallback to email if Stripe ID is missing (should be rare with PI flow)
+    query = query.select(`${CUSTOMER_PK_COLUMN}, ${CUSTOMER_STRIPE_ID_COLUMN}`)
+                 .eq(CUSTOMER_EMAIL_COLUMN, customerEmail)
+                 .maybeSingle();
+  }
+
+  const { data: existingCustomer, error: findError } = await query;
+
+  if (findError) {
+    console.error('Supabase error finding customer:', findError);
+    throw new Error(`Error finding customer: ${findError.message}`);
+  }
+
+  if (existingCustomer) {
+    console.log(`Found existing customer: ${existingCustomer[CUSTOMER_PK_COLUMN]}`);
+    // If found by email but Stripe ID is missing in DB, update it
+    if (stripeCustomerId && !existingCustomer[CUSTOMER_STRIPE_ID_COLUMN]) {
+       const { error: updateError } = await supabase
+        .from(CUSTOMERS_TABLE)
+        .update({ [CUSTOMER_STRIPE_ID_COLUMN]: stripeCustomerId })
+        .eq(CUSTOMER_PK_COLUMN, existingCustomer[CUSTOMER_PK_COLUMN]);
+
+       if (updateError) {
+         console.error('Supabase error updating customer with Stripe ID:', updateError);
+         // Log error but proceed with the found customer ID
+       } else {
+         console.log(`Updated customer ${existingCustomer[CUSTOMER_PK_COLUMN]} with Stripe ID ${stripeCustomerId}`);
+       }
+    }
+    return existingCustomer[CUSTOMER_PK_COLUMN];
+  }
+
+  // --- Customer Not Found - Create New Customer ---
+  console.log('Customer not found, creating new customer.');
+  const customerInsertData = {
+    [CUSTOMER_EMAIL_COLUMN]: customerEmail, // Email is essential
+    // Add other fields if available from metadata or default values
+  };
+  if (stripeCustomerId) {
+    customerInsertData[CUSTOMER_STRIPE_ID_COLUMN] = stripeCustomerId;
+  }
+
+  const { data: newCustomer, error: createError } = await supabase
+    .from(CUSTOMERS_TABLE)
+    .insert(customerInsertData)
+    .select(CUSTOMER_PK_COLUMN)
+    .single(); // Use single() as we expect one row back
+
+  if (createError) {
+    console.error('Supabase error creating customer:', createError);
+    // Check for unique constraint violation on email
+    if (createError.code === '23505' && createError.message.includes(CUSTOMER_EMAIL_COLUMN)) {
+       console.warn('Race condition? Customer likely created between find and insert. Attempting to find again.');
+       // Attempt to find again by email, more robustly
+       const { data: foundCustomer, error: findAgainError } = await supabase
+         .from(CUSTOMERS_TABLE)
+         .select(CUSTOMER_PK_COLUMN)
+         .eq(CUSTOMER_EMAIL_COLUMN, customerEmail)
+         .single(); // Use single here
+
+       if (findAgainError || !foundCustomer) {
+         console.error('Failed to find customer even after unique constraint error:', findAgainError);
+         throw new Error(`Error creating customer after unique constraint: ${findAgainError?.message || 'Not found'}`);
+       }
+       console.log(`Found customer via email after race condition: ${foundCustomer[CUSTOMER_PK_COLUMN]}`);
+       // Optionally update Stripe ID here too if needed/possible
+       return foundCustomer[CUSTOMER_PK_COLUMN];
+    }
+    throw new Error(`Error creating customer: ${createError.message}`);
+  }
+
+  console.log(`Created new customer: ${newCustomer[CUSTOMER_PK_COLUMN]}`);
+  return newCustomer[CUSTOMER_PK_COLUMN];
+}
+
+// --- Main Handler for Successful Payments ---
+async function handlePaymentSucceeded(paymentIntent) {
+  const stripePaymentIntentId = paymentIntent.id;
+  const stripeCustomerId = paymentIntent.customer; // Stripe Customer ID (string)
+  const customerEmail = paymentIntent.metadata?.customer_email || paymentIntent.receipt_email; // Get email from metadata or receipt
+  const amountReceived = paymentIntent.amount_received; // Amount in CENTS (integer)
+  const currency = paymentIntent.currency; // Currency code (string)
+  const metadata = paymentIntent.metadata;
+
+  console.log(`Handling successful payment for PI: ${stripePaymentIntentId}`);
+
+  try {
+    // 1. Find or Create Customer Record in Supabase
+    const supabaseCustomerId = await findOrCreateCustomer(stripeCustomerId, customerEmail);
+    // supabaseCustomerId can be null if findOrCreateCustomer allows it
+
+    // 2. Create Order Record
+    // Ensure we don't create duplicate orders for the same Payment Intent
+    const { data: existingOrder, error: findOrderError } = await supabase
+      .from(ORDERS_TABLE)
+      .select(ORDER_PK_COLUMN)
+      .eq(ORDER_STRIPE_PI_ID_COLUMN, stripePaymentIntentId)
       .maybeSingle();
 
-    if (findError) {
-      console.error('  Error finding customer by Stripe ID:', findError);
-      // Decide if this is critical - maybe proceed without linking? Or throw error?
-      // For now, log and continue, trying email next.
-    } else if (customer) {
-      supabaseCustomerId = customer[CUSTOMER_PK_COLUMN];
-      console.log(`  Found Supabase customer by Stripe ID: ${supabaseCustomerId}`);
+    if (findOrderError) {
+      console.error('Supabase error checking for existing order:', findOrderError);
+      throw new Error(`Error checking for existing order: ${findOrderError.message}`);
     }
-  }
 
-  // If not found by Stripe ID, try finding or creating by email (if available)
-  if (!supabaseCustomerId && customerEmail) {
-     console.log(`  Customer not found by Stripe ID, trying email: ${customerEmail}`);
-     // This uses upsert: inserts if email doesn't exist, does nothing if it does (and returns the existing row)
-     // 'onConflict' assumes you have a UNIQUE constraint on the email column in your Supabase customers table.
-     const { data: customer, error: upsertError } = await supabase
-       .from(CUSTOMERS_TABLE)
-       .upsert(
-         {
-           email: customerEmail,
-           [CUSTOMER_STRIPE_ID_COLUMN]: stripeCustomerId, // Add Stripe ID if creating
-           // Add other customer details from paymentIntent if needed (name, address)
-           // name: paymentIntent.customer?.name || paymentIntent.shipping?.name,
-         },
-         {
-           onConflict: 'email', // Specify the column with the unique constraint
-           ignoreDuplicates: false, // Set to false to return the existing row on conflict
-         }
-       )
-       .select(CUSTOMER_PK_COLUMN) // Select the primary key after upsert
-       .single(); // Expect a single result
+    if (existingOrder) {
+      console.warn(`Order already exists for Payment Intent ${stripePaymentIntentId}. Skipping creation.`);
+      // Optionally update status if needed, but generally should be idempotent
+      return; // Successfully handled (already processed)
+    }
 
-     if (upsertError) {
-       console.error('  Error upserting customer by email:', upsertError);
-       // Decide how critical this is. Maybe proceed without a customer link?
-       // Throwing an error might be safer to ensure data integrity.
-       throw new Error(`Database error upserting customer: ${upsertError.message}`);
-     } else if (customer) {
-       supabaseCustomerId = customer[CUSTOMER_PK_COLUMN];
-       console.log(`  Upserted/Found Supabase customer by email: ${supabaseCustomerId}`);
-       // If we just created the customer, link the Stripe ID if we didn't find it earlier
-       if (stripeCustomerId && !customer[CUSTOMER_STRIPE_ID_COLUMN]) {
-         const { error: updateStripeIdError } = await supabase
-           .from(CUSTOMERS_TABLE)
-           .update({ [CUSTOMER_STRIPE_ID_COLUMN]: stripeCustomerId })
-           .eq(CUSTOMER_PK_COLUMN, supabaseCustomerId);
-         if (updateStripeIdError) console.error('  Error updating Stripe ID for newly upserted customer:', updateStripeIdError);
-       }
-     }
-  }
+    // Create the new order
+    const { data: newOrder, error: orderError } = await supabase
+      .from(ORDERS_TABLE)
+      .insert({
+        [ORDER_CUSTOMER_FK_COLUMN]: supabaseCustomerId, // Can be null if allowed by findOrCreateCustomer and FK constraint
+        [ORDER_STRIPE_PI_ID_COLUMN]: stripePaymentIntentId,
+        [ORDER_AMOUNT_COLUMN]: amountReceived, // Store amount IN CENTS
+        [ORDER_CURRENCY_COLUMN]: currency.toUpperCase(), // Store currency code
+        [ORDER_STATUS_COLUMN]: paymentIntent.status, // 'succeeded'
+        // Add other relevant fields like metadata if needed
+        // metadata: metadata
+      })
+      .select(ORDER_PK_COLUMN) // Select the primary key of the newly created order
+      .single(); // Expect a single row
 
-  if (!supabaseCustomerId) {
-      console.warn(`  Could not find or create a Supabase customer record for this order.`);
-      // Decide: Proceed with null customer_id in orders table? Or throw error?
-      // throw new Error('Failed to associate order with a customer.');
-  }
+    if (orderError) {
+      console.error('Supabase error creating order:', orderError);
+      throw new Error(`Error creating order: ${orderError.message}`);
+    }
 
-  // 3. Create Order in Supabase
-  const { data: newOrder, error: orderError } = await supabase
-    .from(ORDERS_TABLE)
-    .insert({
-      [ORDER_CUSTOMER_FK_COLUMN]: supabaseCustomerId, // Can be null if you allow it
-      [ORDER_STRIPE_PI_ID_COLUMN]: stripePaymentIntentId,
-      [ORDER_AMOUNT_COLUMN]: amountReceived, // Store amount in dollars
-      [ORDER_CURRENCY_COLUMN]: currency,
-      [ORDER_STATUS_COLUMN]: paymentIntent.status, // 'succeeded'
-      // Add other relevant fields like metadata if needed
-      // metadata: metadata
-    })
-    .select(ORDER_PK_COLUMN) // Select the primary key of the new order
-    .single(); // Expect a single result
+    const supabaseOrderId = newOrder[ORDER_PK_COLUMN];
+    console.log(`Created new order with ID: ${supabaseOrderId}`);
 
-  if (orderError) {
-    console.error('  Error inserting order:', orderError);
-    throw new Error(`Database error creating order: ${orderError.message}`);
-  }
-
-  const supabaseOrderId = newOrder[ORDER_PK_COLUMN];
-  console.log(`  Successfully inserted order with ID: ${supabaseOrderId}`);
-
-  // 4. Create Order Items (Requires item details, e.g., from metadata)
-  let cartItems = [];
-  if (metadata?.cart_details) { // Check if you stored cart details in metadata
+    // 3. Create Order Items from Metadata
+    let cartItems = [];
+    if (metadata?.cart_details) {
       try {
-          cartItems = JSON.parse(metadata.cart_details); // Expecting [{ productId: '...', quantity: ... }]
-          console.log(`  Parsed cart items from metadata: ${JSON.stringify(cartItems)}`);
+        cartItems = JSON.parse(metadata.cart_details);
+        if (!Array.isArray(cartItems)) {
+          console.warn('cart_details metadata is not an array:', metadata.cart_details);
+          cartItems = [];
+        }
       } catch (parseError) {
-          console.error('  Error parsing cart_details from metadata:', parseError);
-          // Decide how to handle - maybe log and skip item creation?
-          cartItems = []; // Ensure it's an empty array if parsing fails
+        console.error('Error parsing cart_details metadata:', parseError);
+        // Decide how to handle - log, proceed without items, or throw?
+        cartItems = []; // Proceed without items for now
       }
-  } else {
-      console.warn('  No cart_details found in PaymentIntent metadata. Cannot create order items.');
-  }
-
-  if (cartItems.length > 0 && supabaseOrderId) {
-    const orderItemsData = cartItems.map(item => ({
-      [ORDER_ITEM_ORDER_FK_COLUMN]: supabaseOrderId,
-      [ORDER_ITEM_PRODUCT_FK_COLUMN]: item.productId, // Assumes 'productId' is the key in metadata
-      [ORDER_ITEM_QUANTITY_COLUMN]: item.quantity,   // Assumes 'quantity' is the key in metadata
-      // Optional: Add price_at_purchase if available in metadata or fetched
-    }));
-
-    console.log(`  Attempting to insert order items: ${JSON.stringify(orderItemsData)}`);
-
-    const { error: itemsError } = await supabase
-      .from(ORDER_ITEMS_TABLE)
-      .insert(orderItemsData);
-
-    if (itemsError) {
-      console.error('  Error inserting order items:', itemsError);
-      // Log the error but don't necessarily throw, as the main order is already created.
-      // Consider adding a status to the order indicating item insertion failed.
     } else {
-      console.log(`  Successfully inserted ${orderItemsData.length} order item(s).`);
+        console.warn(`No cart_details found in metadata for Payment Intent ${stripePaymentIntentId}`);
     }
-  }
 
-  console.log(`Finished handling PaymentIntent ${stripePaymentIntentId}`);
+    if (cartItems.length > 0) {
+      const orderItemsData = cartItems.map(item => ({
+        [ORDER_ITEM_ORDER_FK_COLUMN]: supabaseOrderId, // Link to the order created above
+        [ORDER_ITEM_PRODUCT_FK_COLUMN]: item.id, // Assumes item.id is the UUID/PK of the activity/product
+        [ORDER_ITEM_QUANTITY_COLUMN]: item.quantity,
+        // Optional: Add price_at_purchase if you fetch prices here or pass them in metadata
+      }));
+
+      const { error: itemsError } = await supabase
+        .from(ORDER_ITEMS_TABLE)
+        .insert(orderItemsData);
+
+      if (itemsError) {
+        console.error('Supabase error creating order items:', itemsError);
+        // Consider the order partially failed? Or just log the error?
+        // Throwing for now to indicate a problem.
+        throw new Error(`Error creating order items: ${itemsError.message}`);
+      }
+      console.log(`Inserted ${orderItemsData.length} order items for order ${supabaseOrderId}`);
+    }
+
+    // 4. (Optional) Trigger Post-Order Actions (e.g., send confirmation email)
+    // await sendConfirmationEmail(supabaseOrderId); // Example call
+
+    console.log(`Successfully processed Payment Intent ${stripePaymentIntentId}`);
+
+  } catch (error) {
+    console.error(`Error processing payment intent ${stripePaymentIntentId}:`, error);
+    // Log error details for investigation
+    await logPaymentEvent(null, stripePaymentIntentId, 'processing_error', { error: error.message, stack: error.stack });
+    // Rethrow or handle as needed - Stripe might retry the webhook
+    throw error;
+  }
 }
 
 /**
