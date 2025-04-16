@@ -1617,13 +1617,9 @@ function applyDiscount(code, discountPercentage) {
   
   if (orderSummaryList) {
     // Add the discount line if it doesn't exist
-    let discountLine = document.querySelector('.discount-line');
-    
-    if (!discountLine) {
-      discountLine = document.createElement('div');
-      discountLine.className = 'w-commerce-commercecheckoutsummarylineitem discount-line';
-      orderSummaryList.appendChild(discountLine);
-    }
+    let discountLine = document.createElement('div');
+    discountLine.className = 'w-commerce-commercecheckoutsummarylineitem discount-line';
+    orderSummaryList.appendChild(discountLine);
     
     discountLine.innerHTML = `
       <div class="text-block-4">Discount (${code})</div>
@@ -1748,3 +1744,321 @@ if (window.initCheckoutPage) {
     }
   });
 }
+
+/**
+ * Adds an item to the shopping cart stored in localStorage.
+ * Ensures a consistent item structure for checkout.
+ *
+ * @param {string} productId - The unique ID (UUID) of the product/service.
+ * @param {string} productName - The name of the product/service.
+ * @param {number} productPrice - The price of the product/service in CENTS (integer).
+ * @param {number} [quantity=1] - The quantity of the item to add (defaults to 1).
+ * @param {string} [productImage=null] - Optional URL of the product image.
+ */
+function addToCart(productId, productName, productPrice, quantity = 1, productImage = null) {
+  console.log(`Attempting to add to cart: ID=${productId}, Name=${productName}, Price=${productPrice} cents, Qty=${quantity}`);
+
+  // --- Validation ---
+  if (!productId || typeof productId !== 'string') {
+    console.error('addToCart Error: Invalid or missing productId.');
+    alert('Error: Could not add item to cart due to invalid product ID.');
+    return;
+  }
+  if (!productName || typeof productName !== 'string') {
+    console.error('addToCart Error: Invalid or missing productName.');
+    alert('Error: Could not add item to cart due to invalid product name.');
+    return;
+  }
+  if (typeof productPrice !== 'number' || !Number.isInteger(productPrice) || productPrice < 0) {
+    console.error(`addToCart Error: Invalid productPrice. Expected positive integer (cents), received: ${productPrice} (type: ${typeof productPrice})`);
+    alert('Error: Could not add item to cart due to invalid price.');
+    return;
+  }
+   if (typeof quantity !== 'number' || !Number.isInteger(quantity) || quantity < 1) {
+    console.warn(`addToCart Warning: Invalid quantity (${quantity}). Defaulting to 1.`);
+    quantity = 1;
+  }
+  // --- End Validation ---
+
+  // Get existing cart or initialize an empty array
+  let cart = JSON.parse(localStorage.getItem('cart')) || [];
+  if (!Array.isArray(cart)) { // Ensure cart is always an array
+      console.warn('Cart data in localStorage was not an array. Resetting.');
+      cart = [];
+  }
+
+  // --- Check if item already exists (optional - decide if you want to increment quantity or add as new line) ---
+  // Simple approach: Allow duplicate line items for now.
+  // To increment quantity instead:
+  /*
+  const existingItemIndex = cart.findIndex(item => item.id === productId);
+  if (existingItemIndex > -1) {
+    cart[existingItemIndex].quantity += quantity;
+    console.log(`Incremented quantity for item ${productId} to ${cart[existingItemIndex].quantity}`);
+  } else {
+    // Add as new item (code below)
+    const newItem = {
+      id: productId,
+      name: productName,
+      price: productPrice, // Price IN CENTS
+      quantity: quantity,
+      image: productImage
+    };
+    cart.push(newItem);
+    console.log('Item added:', newItem);
+  }
+  */
+
+  // --- Create the new cart item object (allowing duplicates for now) ---
+  const newItem = {
+    id: productId,       // Consistent ID field (UUID)
+    name: productName,   // Consistent name field
+    price: productPrice, // Price IN CENTS
+    quantity: quantity,  // Quantity
+    image: productImage  // Image URL (can be null)
+  };
+  cart.push(newItem);
+  console.log('Item added:', newItem);
+
+
+  // Save the updated cart back to localStorage
+  localStorage.setItem('cart', JSON.stringify(cart));
+  console.log('Cart saved to localStorage:', cart);
+
+  // Update the cart display (e.g., count in the header)
+  updateCartDisplay(); // Call the updated display function
+
+  // Optional: Trigger a custom event that other parts of the app can listen to
+  window.dispatchEvent(new CustomEvent('cartUpdated'));
+}
+
+
+/**
+ * Helper function to add items to the cart from button data attributes.
+ * Reads data-* attributes and calls the main addToCart function.
+ * @param {HTMLElement} buttonElement - The button element that was clicked.
+ */
+function addToCartFromButton(buttonElement) {
+  const productId = buttonElement.getAttribute('data-product-id');
+  const productName = buttonElement.getAttribute('data-product-name');
+  const productPriceString = buttonElement.getAttribute('data-product-price');
+  // Optional: Try to find an image in the button's parent structure
+  const card = buttonElement.closest('.activity-card, .registration-option, .w-tab-pane'); // Add relevant parent selectors
+  const productImage = card?.querySelector('img')?.src || null; // Get image src if found
+
+  // Basic validation
+  if (!productId || productId === 'PLACEHOLDER_ID' || productId.includes('_PLACEHOLDER')) {
+      alert('Error: Product ID is missing or not configured for this item.');
+      console.error('Missing or placeholder product ID on button:', buttonElement);
+      return;
+  }
+  if (!productName) {
+      alert('Error: Product name is missing for this item.');
+      console.error('Missing product name on button:', buttonElement);
+      return;
+  }
+  if (!productPriceString || isNaN(parseInt(productPriceString)) || productPriceString.includes('_PLACEHOLDER')) {
+      alert('Error: Product price is missing or invalid for this item.');
+      console.error('Missing or invalid product price on button:', buttonElement);
+      return;
+  }
+
+  const productPrice = parseInt(productPriceString); // Price should be in cents
+
+  // Call the NEW addToCart function
+  addToCart(productId, productName, productPrice, 1, productImage); // Pass data to the main function, assume quantity 1
+
+  // Optional: Provide user feedback
+  const originalText = buttonElement.textContent;
+  buttonElement.textContent = 'Added!';
+  buttonElement.disabled = true; // Prevent multiple clicks
+  setTimeout(() => {
+      buttonElement.textContent = originalText; // Restore original text
+      buttonElement.disabled = false;
+  }, 2000);
+}
+
+
+/**
+ * Updates the cart quantity display in the header (and potentially other places).
+ */
+function updateCartDisplay() {
+  const cart = JSON.parse(localStorage.getItem('cart')) || [];
+  if (!Array.isArray(cart)) { // Ensure cart is always an array
+      console.warn('Cart data in localStorage was not an array. Resetting for display.');
+      cart = [];
+  }
+  // Calculate total quantity of all items in the cart
+  const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0); // Sum of quantities
+
+  const cartCountElements = document.querySelectorAll('.cart-quantity-cart'); // Target elements by class
+  if (cartCountElements.length > 0) {
+      cartCountElements.forEach(element => {
+          element.textContent = totalItems; // Display total quantity
+      });
+      console.log(`Cart display updated. Total items: ${totalItems}`);
+  } else {
+      console.warn('No elements found with class "cart-quantity-cart" to update.');
+  }
+
+  // If you have a cart sidebar/modal that needs updating, call its update function here
+  // updateCartSidebarContents(); // Example
+}
+
+
+/**
+ * Sets up event listeners for activity cards to add items to the cart.
+ * Reads data from the card and its elements.
+ */
+function handleActivitySelection() {
+  // Use a more specific selector if possible, or ensure '.activity-card' is correct
+  const activityCards = document.querySelectorAll('.activity-card');
+  console.log(`Found ${activityCards.length} activity cards.`);
+
+  if (activityCards.length === 0) {
+      console.log("No activity cards found with selector '.activity-card'. Skipping handleActivitySelection setup.");
+      return;
+  }
+
+  activityCards.forEach((card, index) => {
+    console.log(`Processing activity card ${index + 1}:`, card);
+    // Use specific selectors within the card context
+    const addButton = card.querySelector('.activity-add-btn'); // Make sure this selector is correct
+    const titleElement = card.querySelector('.activity-title'); // Or appropriate title element
+    const priceElement = card.querySelector('.activity-price'); // Or element holding base price
+    const imageElement = card.querySelector('.activity-image img'); // Or appropriate image element
+    const guestSelect = card.querySelector('.guest-select'); // Selector for guest dropdown
+    const variantSelect = card.querySelector('.variant-select'); // Selector for variant dropdown
+
+    // --- Basic validation for elements ---
+    if (!addButton) {
+      console.warn(`Skipping activity card setup ${index + 1} - missing add button (selector: .activity-add-btn):`, card);
+      return; // Skip this card if button is missing
+    }
+     if (!titleElement) {
+      console.warn(`Skipping activity card setup ${index + 1} - missing title element (selector: .activity-title):`, card);
+      return; // Skip this card if title is missing
+    }
+     if (!priceElement) {
+      console.warn(`Skipping activity card setup ${index + 1} - missing price element (selector: .activity-price):`, card);
+      return; // Skip this card if price is missing
+    }
+    // --- End Basic validation ---
+
+    const baseTitle = titleElement.textContent.trim();
+    // Extract base price (assuming it's displayed like "$100" or "100") - NEEDS TO BE IN CENTS
+    let basePriceText = priceElement.textContent.trim().replace(/[^0-9.]/g, ''); // Remove $, commas etc.
+    let basePrice = Math.round(parseFloat(basePriceText) * 100); // Convert to cents
+
+    if (isNaN(basePrice)) {
+        console.warn(`Could not parse base price for "${baseTitle}". Found: "${priceElement.textContent}". Defaulting price to 0.`, card);
+        basePrice = 0; // Default to 0 if parsing fails
+    } else {
+        console.log(`Parsed base price for "${baseTitle}": ${basePrice} cents`);
+    }
+
+    const imageSrc = imageElement ? imageElement.src : null;
+    // Use data-product-id from the card or button if available, otherwise generate placeholder
+    // IMPORTANT: Replace placeholders with actual IDs later!
+    const productId = card.getAttribute('data-product-id') || addButton.getAttribute('data-product-id') || `ACTIVITY_PLACEHOLDER_${baseTitle.replace(/\s+/g, '_')}`;
+    console.log(`Using Product ID for "${baseTitle}": ${productId}`);
+
+
+    addButton.addEventListener('click', () => {
+      console.log(`Add button clicked for "${baseTitle}"`);
+      let quantity = 1;
+      let finalPrice = basePrice; // Price per item in cents
+      let itemTitle = baseTitle; // Start with base title
+
+      // --- Handle Variants ---
+      if (variantSelect && variantSelect.value) {
+        const selectedVariantOption = variantSelect.options[variantSelect.selectedIndex];
+        const variantText = selectedVariantOption.text;
+        itemTitle += ` - ${variantText}`; // Append variant text to title
+        console.log(`Variant selected: ${variantText}`);
+        // Optional: Check if variant has its own price override (e.g., data-variant-price attribute)
+        const variantPriceOverride = selectedVariantOption.getAttribute('data-variant-price-cents');
+        if (variantPriceOverride && !isNaN(parseInt(variantPriceOverride))) {
+            finalPrice = parseInt(variantPriceOverride); // Use variant price IN CENTS
+            console.log(`Using variant price override: ${finalPrice} cents for ${variantText}`);
+        }
+      }
+
+      // --- Handle Guest Selection (adjust quantity or title) ---
+      if (guestSelect) {
+          const selectedOption = guestSelect.value;
+          console.log(`Guest option selected: ${selectedOption}`);
+          if (selectedOption === 'both') {
+            quantity = 2; // Add two items or one item with quantity 2? Let's use quantity.
+            itemTitle += ' (Delegate & Spouse)'; // Modify title for clarity
+            // Price might double OR might be a specific bundle price. Assuming price is PER PERSON here.
+            // finalPrice remains price per person. addToCart handles quantity.
+            console.log(`Quantity set to 2 for Delegate & Spouse`);
+          } else if (selectedOption === 'spouse') {
+            itemTitle += ' (Spouse Only)';
+          } else { // 'me' or default
+            itemTitle += ' (Delegate Only)';
+          }
+      } else {
+          // If no guest select, assume quantity 1 for the delegate
+          itemTitle += ' (Delegate Only)'; // Or adjust as needed
+          console.log(`No guest select found, assuming quantity 1 for Delegate Only`);
+      }
+
+
+      // --- Call the unified addToCart function ---
+      addToCart(productId, itemTitle, finalPrice, quantity, imageSrc);
+
+      // --- Visual feedback ---
+      const originalText = addButton.textContent;
+      addButton.textContent = 'Added!';
+      addButton.classList.add('added'); // Add class for styling if needed
+      addButton.disabled = true;
+
+      setTimeout(() => {
+        addButton.textContent = originalText; // Restore original text
+        addButton.classList.remove('added');
+        addButton.disabled = false;
+      }, 2000);
+    });
+  });
+}
+
+
+// --- Initialization ---
+document.addEventListener('DOMContentLoaded', () => {
+  console.log("DOM fully loaded and parsed");
+
+  // Initialize general things like smooth scroll, dropdowns etc.
+  // initSmoothScroll();
+  // initDropdowns();
+
+  // Update cart display on every page load
+  updateCartDisplay();
+
+  // Initialize page-specific functions
+  // Use more robust checks if possible (e.g., check for a specific body class or unique element)
+  if (document.querySelector('.activity-card')) { // Check if activity cards are present
+    console.log("Activity cards found, initializing handleActivitySelection...");
+    handleActivitySelection(); // Initialize activity selection logic
+  } else {
+    console.log("No activity cards found on this page.");
+  }
+
+  // Add checks for other pages if needed
+  if (window.location.pathname.includes('checkout.html') || document.getElementById('checkout-form')) { // Example check
+    console.log("Checkout page detected, initializing checkout logic...");
+    // initCheckoutPage(); // Call checkout specific setup if it exists in this file
+  }
+  if (window.location.pathname.includes('sponsor.html')) {
+      console.log("Sponsor page detected.");
+      // Sponsor logic is now handled by addToCartFromButton via onclick
+      // or the event listener in sponsor.html's script block (which also calls addToCart)
+      // Ensure the event listener in sponsor.html is correctly calling addToCart
+  }
+
+  // Add event listener for cart updates (e.g., from remove item in stripe-checkout.js)
+  window.addEventListener('cartUpdated', updateCartDisplay);
+  console.log("Initial setup complete. Listening for cart updates.");
+
+});

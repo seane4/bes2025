@@ -421,12 +421,32 @@ function getCartTotal() {
   return cartTotal ? Math.round(parseFloat(cartTotal) * 100) : 0;
 }
 
+// Helper function to get cart items safely
 function getCartItems() {
-  const cart = localStorage.getItem('cart');
-  console.log('Raw cart data:', cart); // Debug log
-  const items = cart ? JSON.parse(cart) : [];
-  console.log('Parsed cart items:', items); // Debug log
-  return items;
+  try {
+      const cartString = localStorage.getItem('cart');
+      if (!cartString) {
+          return []; // No cart data
+      }
+      const cart = JSON.parse(cartString);
+      if (!Array.isArray(cart)) { // Ensure cart is always an array
+          console.warn('Cart data in localStorage was not an array. Resetting.');
+          localStorage.setItem('cart', JSON.stringify([])); // Clear invalid data
+          return [];
+      }
+      // Optional: Further validation of items within the array
+      return cart.filter(item =>
+          item && typeof item === 'object' &&
+          item.id && typeof item.id === 'string' && // Expect string ID
+          item.name && typeof item.name === 'string' &&
+          typeof item.price === 'number' && Number.isInteger(item.price) && item.price >= 0 && // Expect integer price in cents >= 0
+          typeof item.quantity === 'number' && Number.isInteger(item.quantity) && item.quantity > 0 // Expect integer quantity > 0
+      );
+  } catch (error) {
+      console.error("Error parsing cart data from localStorage:", error);
+      localStorage.setItem('cart', JSON.stringify([])); // Clear potentially corrupted data
+      return [];
+  }
 }
 
 function clearCart() {
@@ -479,125 +499,228 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-// Make removeCartItem function globally available
-window.removeCartItem = function(itemId) {
-  console.log('Removing item:', itemId); // Debug log
-  let cart = getCartItems();
-  cart = cart.filter(item => item.id.toString() !== itemId.toString());
-  console.log('Updated cart:', cart); // Debug log
-  localStorage.setItem('cart', JSON.stringify(cart));
-  
-  // Update cart total - handle both price formats
-  // Method 1: Standard calculation (assuming price is in cents)
-  let subtotal = cart.reduce((sum, item) => {
-    const price = parseFloat(item.price) || 0;
-    const quantity = parseInt(item.quantity, 10) || 1;
-    return sum + (price * quantity);
-  }, 0);
-  
-  // Method 2: Alternative calculation (if prices are already in dollars)
-  let altSubtotal = cart.reduce((sum, item) => {
-    const price = parseFloat(item.price) || 0;
-    const quantity = parseInt(item.quantity, 10) || 1;
-    return sum + (price * quantity);
-  }, 0);
-  
-  // Choose the appropriate total based on results
-  let finalSubtotal = subtotal / 100;
-  
-  // If standard calculation gives zero but alt doesn't, use alt
-  if (cart.length > 0 && subtotal === 0 && altSubtotal > 0) {
-    console.log('Using alternative calculation method for removeCartItem (prices appear to be in dollars already)');
-    finalSubtotal = altSubtotal;
+// Function to display items (Adapt selectors to your checkout page HTML)
+function displayOrderItems() {
+  const cart = getCartItems();
+  // IMPORTANT: Update this selector to match your actual container for order items
+  const orderItemsContainer = document.getElementById('order-items-container') || document.querySelector('.order-summary-list'); // Example selectors
+
+  // IMPORTANT: Update this selector for the subtotal display
+  const subtotalElement = document.getElementById('subtotal-display') || document.querySelector('.subtotal-value'); // Example selectors
+
+  if (!orderItemsContainer) {
+      console.error("Order items container element not found. Cannot display items.");
+      // Attempt to update total anyway if element exists
+      if (subtotalElement) {
+          subtotalElement.textContent = '$0.00';
+      }
+      return;
   }
-  
-  localStorage.setItem('cartTotal', finalSubtotal.toFixed(2));
-  
-  // Update displays
-  displayOrderItems();
-  window.dispatchEvent(new CustomEvent('cartUpdated'));
+
+  orderItemsContainer.innerHTML = ''; // Clear previous items
+  let currentSubtotalCents = 0;
+
+  if (cart.length === 0) {
+    orderItemsContainer.innerHTML = '<li>Your cart is empty.</li>'; // Use list item for consistency
+  } else {
+    cart.forEach(item => {
+      // Item structure is already validated by getCartItems
+      const quantity = item.quantity;
+      const priceInCents = item.price;
+      const itemTotalCents = priceInCents * quantity;
+      currentSubtotalCents += itemTotalCents;
+
+      // Create list item element (Adapt HTML structure and classes as needed)
+      const listItem = document.createElement('li');
+      listItem.classList.add('order-item'); // Add a class for styling
+      // Ensure item.id is a string for the attribute and function call
+      const itemIdStr = String(item.id);
+      listItem.innerHTML = `
+        <div class="item-details">
+          <span class="item-name">${item.name}</span>
+          <span class="item-quantity"> &times; ${quantity}</span>
+          <span class="item-price-each"> ($${(priceInCents / 100).toFixed(2)} each)</span>
+        </div>
+        <div class="item-total-price">$${(itemTotalCents / 100).toFixed(2)}</div>
+        <button class="remove-item-btn" title="Remove item" onclick="removeCartItem('${itemIdStr}')" data-item-id="${itemIdStr}">×</button>
+      `;
+      orderItemsContainer.appendChild(listItem);
+    });
+  }
+
+  // Update subtotal display
+  const subtotalDollars = (currentSubtotalCents / 100).toFixed(2);
+  if (subtotalElement) {
+    subtotalElement.textContent = `$${subtotalDollars}`;
+  } else {
+      console.warn("Subtotal display element not found.");
+  }
+
+  // Also update the grand total if it's displayed separately and calculated here
+  // IMPORTANT: Update selector if needed
+  const grandTotalElement = document.getElementById('grand-total') || document.querySelector('.grand-total-value'); // Example selectors
+   if (grandTotalElement) {
+     grandTotalElement.textContent = `$${subtotalDollars}`; // Assuming subtotal is grand total for now
+   }
+
+   console.log(`Order items displayed. Subtotal: $${subtotalDollars}`);
+}
+
+// Make removeCartItem function globally available and use the correct ID
+window.removeCartItem = function(itemIdToRemove) {
+  // Ensure itemIdToRemove is treated as a string for comparison
+  const idStr = String(itemIdToRemove);
+  console.log('Attempting to remove item with ID:', idStr);
+  let cart = getCartItems(); // Get validated cart items
+
+  // Filter out the item(s) with the matching ID
+  const initialLength = cart.length;
+  // Create a new array excluding the item(s) to remove
+  const updatedCart = cart.filter(item => String(item.id) !== idStr);
+  const itemsRemovedCount = initialLength - updatedCart.length;
+
+  if (itemsRemovedCount > 0) {
+      console.log(`Removed ${itemsRemovedCount} item instance(s) with ID: ${idStr}`);
+      // Save the updated cart back to localStorage
+      localStorage.setItem('cart', JSON.stringify(updatedCart));
+      console.log('Updated cart saved:', updatedCart);
+
+      // Update displays
+      displayOrderItems(); // Refresh the displayed list and totals
+      window.dispatchEvent(new CustomEvent('cartUpdated')); // Notify other listeners (like header count in index.js)
+  } else {
+      console.warn(`No item found with ID: ${idStr} to remove.`);
+  }
 };
 
-// Function to display order items
-function displayOrderItems() {
-  const orderItemsList = document.querySelector('.w-commerce-commercecheckoutorderitemslist');
-  const cartItems = getCartItems();
-  
-  // Update the order summary first to ensure totals are correct
-  if (typeof window.updateOrderSummary === 'function') {
-    window.updateOrderSummary();
+// Function to prepare data and redirect to Stripe
+async function redirectToCheckout() {
+  console.log("Initiating redirectToCheckout...");
+  const cart = getCartItems(); // Get validated cart items
+
+  if (cart.length === 0) {
+    alert("Your cart is empty. Please add items before checking out.");
+    console.log("Checkout aborted: Cart is empty.");
+    return;
   }
-  
-  // Update Items in Order section
-  if (orderItemsList && cartItems.length > 0) {
-    orderItemsList.innerHTML = cartItems.map(item => {
-      const price = parseFloat(item.price) || 0;
-      const quantity = parseInt(item.quantity, 10) || 1;
-      
-      // Check if price is in cents or dollars
-      let formattedPrice; 
-      // Try calculating both ways
-      const inCents = (price * quantity / 100).toFixed(2);
-      const inDollars = (price * quantity).toFixed(2);
-      
-      // If inCents is 0.00 but inDollars is not, then price is likely in dollars already
-      formattedPrice = (inCents === "0.00" && inDollars !== "0.00") ? inDollars : inCents;
-      
-      return `
-        <div class="w-commerce-commercecheckoutorderitem">
-          ${item.image ? `<img src="${item.image}" alt="${item.name || item.title || 'Product'}" class="w-commerce-commercecheckoutorderitemimage"/>` : ''}
-          <div class="w-commerce-commercecheckoutorderiteminfo">
-            <div class="w-commerce-commercecheckoutorderitemtitle">${item.name || item.title || 'Product'}</div>
-            <div class="w-commerce-commercecheckoutorderitemprice">$${formattedPrice}</div>
-            <div class="w-commerce-commercecheckoutorderitemquantity">Quantity: ${quantity}</div>
-            <button class="remove-item-btn" onclick="removeCartItem('${item.id}')">Remove</button>
-          </div>
-        </div>
-      `;
-    }).join('');
-  } else if (orderItemsList) {
-    orderItemsList.innerHTML = `
-      <div class="empty-cart-message">
-        <p>Your cart is empty</p>
-        <a href="/" class="btn">Continue Shopping</a>
-      </div>
-    `;
+
+  console.log(`Preparing ${cart.length} cart items for Stripe.`);
+
+  // Prepare line_items for Stripe Checkout
+  const lineItems = cart.map(item => {
+    // Item structure is already validated by getCartItems
+    return {
+      price_data: {
+        currency: 'cad', // IMPORTANT: Verify currency code
+        product_data: {
+          name: item.name,
+          // Add description or images if needed and available
+          // description: item.description || `Product ID: ${item.id}`, // Example description
+          // images: item.image ? [item.image] : [], // Ensure image URLs are accessible by Stripe
+        },
+        unit_amount: item.price, // Price MUST be in cents (already validated as integer)
+      },
+      quantity: item.quantity, // Already validated as integer > 0
+    };
+  });
+
+   console.log("Line items prepared for Stripe:", lineItems);
+
+
+  // --- Add loading state to button ---
+  const checkoutButton = document.getElementById('checkout-button'); // Ensure your button has this ID
+  let originalButtonText = '';
+  if (checkoutButton) {
+      originalButtonText = checkoutButton.textContent;
+      checkoutButton.textContent = 'Processing...';
+      checkoutButton.disabled = true;
+  }
+  // --- End loading state ---
+
+
+  try {
+    // Fetch the Checkout Session ID from your backend API route
+    // IMPORTANT: Ensure this matches your actual API endpoint
+    const apiRoute = '/api/create-checkout-session';
+    console.log(`Fetching checkout session from: ${apiRoute}`);
+
+    const response = await fetch(apiRoute, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ line_items: lineItems }), // Send line_items to backend
+    });
+
+    console.log(`Response status from ${apiRoute}: ${response.status}`);
+
+    if (!response.ok) {
+      let errorData;
+      try {
+          errorData = await response.json();
+          console.error("Error data from backend:", errorData);
+      } catch (e) {
+          errorData = { error: await response.text() }; // Fallback if response is not JSON
+          console.error("Non-JSON error response from backend:", errorData.error);
+      }
+      throw new Error(errorData.error || `Server error: ${response.status}`);
+    }
+
+    const { sessionId } = await response.json();
+    console.log("Received Stripe Session ID:", sessionId);
+
+    if (!sessionId) {
+        throw new Error("Missing Session ID from server response.");
+    }
+
+    // Redirect to Stripe Checkout
+    // IMPORTANT: Replace with your ACTUAL Stripe Publishable Key
+    const stripePublishableKey = 'pk_test_YOUR_PUBLISHABLE_KEY'; // REPLACE THIS
+    if (stripePublishableKey.includes('YOUR_PUBLISHABLE_KEY')) {
+        console.error("Stripe Publishable Key is not set!");
+        alert("Checkout configuration error. Please contact support.");
+        throw new Error("Stripe Publishable Key missing.");
+    }
+    const stripe = Stripe(stripePublishableKey);
+
+    console.log("Redirecting to Stripe Checkout...");
+    const { error } = await stripe.redirectToCheckout({ sessionId });
+
+    // This point is only reached if redirectToCheckout fails immediately
+    if (error) {
+      console.error("Stripe redirection error:", error);
+      throw new Error(`Could not redirect to Stripe: ${error.message}`); // Throw to be caught below
+    }
+  } catch (error) {
+    console.error("Checkout process error:", error);
+    alert(`Checkout failed: ${error.message}. Please try again or contact support.`);
+    // --- Restore button state on error ---
+    if (checkoutButton) {
+        checkoutButton.textContent = originalButtonText || 'Checkout';
+        checkoutButton.disabled = false;
+    }
+    // --- End restore button state ---
   }
 }
 
-// Update CSS for remove button
-const removeButtonStyle = document.createElement('style');
-removeButtonStyle.textContent = `
-  .remove-item-btn {
-    background: none;
-    border: none;
-    color: #e53935;
-    font-size: 12px;
-    font-family: Roboto, sans-serif;
-    padding: 4px 8px;
-    margin-left: 8px;
-    cursor: pointer;
-    text-decoration: underline;
-    transition: color 0.2s ease;
-  }
-  
-  .remove-item-btn:hover {
-    color: #c62828;
-  }
-  
-  .empty-cart-message {
-    text-align: center;
-    padding: 30px;
-    font-family: Roboto, sans-serif;
+// Add event listener to your checkout button
+document.addEventListener('DOMContentLoaded', () => {
+  // IMPORTANT: Update selector to match your checkout button
+  const checkoutButton = document.getElementById('checkout-button') || document.querySelector('.checkout-button-class'); // Example selectors
+  if (checkoutButton) {
+    checkoutButton.addEventListener('click', redirectToCheckout);
+    console.log("Checkout button event listener added.");
+  } else {
+      console.warn("Checkout button not found on this page.");
   }
 
-  .w-commerce-commercecheckoutorderiteminfo {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-`;
-document.head.appendChild(removeButtonStyle);
+  // Initial display of items on checkout page load
+  displayOrderItems();
+
+  // Listen for cart updates to refresh display while on the checkout page
+  window.addEventListener('cartUpdated', displayOrderItems);
+  console.log("Stripe checkout script initialized.");
+});
 
 // Make updateOrderSummary function globally available
 window.updateOrderSummary = function() {
