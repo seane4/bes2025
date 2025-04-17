@@ -11,8 +11,12 @@ CREATE TABLE customers (
   postal_code VARCHAR(20) NOT NULL,
   country VARCHAR(100) NOT NULL,
   shirt_size VARCHAR(10) NOT NULL,
+  height VARCHAR(20), -- Added height for primary customer
+  weight INTEGER,     -- Added weight for primary customer
   spouse_name VARCHAR(255),
   spouse_shirt_size VARCHAR(10),
+  spouse_height VARCHAR(20), -- Added height for spouse (optional)
+  spouse_weight INTEGER,     -- Added weight for spouse (optional)
   additional_guest_name VARCHAR(255),
   additional_guest_shirt_size VARCHAR(10),
   special_requirements TEXT,
@@ -62,6 +66,7 @@ CREATE TABLE activities (
   end_time TIMESTAMPTZ,
   location VARCHAR(255),
   status VARCHAR(50) NOT NULL DEFAULT 'active',
+  active BOOLEAN DEFAULT true, -- Added active column
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -222,8 +227,12 @@ BEGIN
         'postal_code', c.postal_code,
         'country', c.country,
         'shirt_size', c.shirt_size,
+        'height', c.height, -- Added height
+        'weight', c.weight, -- Added weight
         'spouse_name', c.spouse_name,
         'spouse_shirt_size', c.spouse_shirt_size,
+        'spouse_height', c.spouse_height, -- Added spouse_height
+        'spouse_weight', c.spouse_weight, -- Added spouse_weight
         'additional_guest_name', c.additional_guest_name,
         'additional_guest_shirt_size', c.additional_guest_shirt_size,
         'special_requirements', c.special_requirements
