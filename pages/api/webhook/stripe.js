@@ -19,28 +19,27 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // --- IMPORTANT: Define Your Supabase Table and Column Names ---
-// *** ADJUST THESE TO MATCH YOUR ACTUAL SUPABASE SCHEMA ***
-const CUSTOMERS_TABLE = 'customers'; // Your customers table
-const ORDERS_TABLE = 'orders';       // Your orders table
-const ORDER_ITEMS_TABLE = 'order_items'; // Your order items table
-const ACTIVITIES_TABLE = 'activities'; // Added for reference if needed later
+// *** ADJUST THESE TO MATCH YOUR ACTUAL SUPABASE SCHEMA (AFTER applying ALTER commands) ***
+const CUSTOMERS_TABLE = 'Customers'; // Case-sensitive table name from your setup
+const ORDERS_TABLE = 'orders';       // Your orders table (lowercase)
+const ORDER_ITEMS_TABLE = 'order_items'; // Your order items table (lowercase)
+const ACTIVITIES_TABLE = 'activities'; // Your activities table (lowercase)
 
-const CUSTOMER_PK_COLUMN = 'id'; // Primary key of your customers table (e.g., 'id')
-const CUSTOMER_EMAIL_COLUMN = 'email'; // Column for customer email
-const CUSTOMER_STRIPE_ID_COLUMN = 'stripe_customer_id'; // Column storing Stripe Customer ID
+const CUSTOMER_PK_COLUMN = 'id'; // Primary key of your customers table (UUID)
+const CUSTOMER_EMAIL_COLUMN = 'email'; // Column for customer email (VARCHAR)
+const CUSTOMER_STRIPE_ID_COLUMN = 'stripe_customer_id'; // Added via ALTER TABLE
 
-const ORDER_PK_COLUMN = 'id'; // Primary key of your orders table (e.g., 'id')
-const ORDER_CUSTOMER_FK_COLUMN = 'customer_id'; // Foreign key in orders linking to customers table PK
-const ORDER_STRIPE_PI_ID_COLUMN = 'stripe_payment_intent_id'; // Column storing Stripe Payment Intent ID
-const ORDER_AMOUNT_COLUMN = 'amount'; // Column for total order amount IN CENTS (integer)
-const ORDER_CURRENCY_COLUMN = 'currency'; // Column for currency (e.g., text)
-const ORDER_STATUS_COLUMN = 'status'; // Column for order status (e.g., text)
+const ORDER_PK_COLUMN = 'id'; // Primary key of your orders table (UUID)
+const ORDER_CUSTOMER_FK_COLUMN = 'customer_id'; // Foreign key in orders linking to customers table PK (UUID)
+const ORDER_STRIPE_PI_ID_COLUMN = 'stripe_payment_intent_id'; // Added via ALTER TABLE
+const ORDER_AMOUNT_COLUMN = 'total'; // Column for total order amount IN CENTS (INTEGER) - Uses 'total' column, altered to INTEGER
+const ORDER_CURRENCY_COLUMN = 'currency'; // Column for currency (e.g., text) - Assumes you added this column via ALTER TABLE or will handle it
+const ORDER_STATUS_COLUMN = 'status'; // Column for order status (VARCHAR)
 
-const ORDER_ITEM_ORDER_FK_COLUMN = 'order_id'; // Foreign key in order_items linking to orders table PK
-const ORDER_ITEM_PRODUCT_FK_COLUMN = 'product_id'; // Foreign key in order_items linking to activities table PK
-const ORDER_ITEM_QUANTITY_COLUMN = 'quantity'; // Column for quantity
-// Optional: Add a column for price_at_purchase if you store it in metadata or fetch it
-// const ORDER_ITEM_PRICE_COLUMN = 'price_at_purchase';
+const ORDER_ITEM_ORDER_FK_COLUMN = 'order_id'; // Foreign key in order_items linking to orders table PK (UUID)
+const ORDER_ITEM_PRODUCT_FK_COLUMN = 'product_id'; // Foreign key in order_items linking to activities table PK (UUID) - Added via ALTER TABLE
+const ORDER_ITEM_QUANTITY_COLUMN = 'quantity'; // INTEGER
+// const ORDER_ITEM_PRICE_COLUMN = 'price'; // Price per item IN CENTS (INTEGER) - Use if storing price snapshot in order_items
 // --- End of Schema Definitions ---
 
 export default async function handler(req, res) {

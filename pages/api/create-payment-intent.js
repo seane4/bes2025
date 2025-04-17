@@ -10,13 +10,13 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Use Service
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // --- Define your Supabase table/column names ---
-// Ensure these match your actual schema from the migration file
+// Ensure these match your actual schema AFTER applying ALTER commands
 const ACTIVITIES_TABLE = 'activities'; // Table with your purchasable items
-const ACTIVITY_PK_COLUMN = 'id'; // Primary key of activities (UUID or TEXT)
-const PRICE_COLUMN = 'price'; // Column name for price IN CENTS (integer) in ACTIVITIES_TABLE
-const CUSTOMERS_TABLE = 'customers'; // As defined in your webhook
-const CUSTOMER_EMAIL_COLUMN = 'email'; // Column for customer email
-const CUSTOMER_STRIPE_ID_COLUMN = 'stripe_customer_id'; // As defined in your webhook
+const ACTIVITY_PK_COLUMN = 'id'; // Primary key of activities (UUID)
+const PRICE_COLUMN = 'price'; // Column name for price IN CENTS (INTEGER) in activities table
+const CUSTOMERS_TABLE = 'Customers'; // Case-sensitive table name from your setup
+const CUSTOMER_EMAIL_COLUMN = 'email'; // Column for customer email (VARCHAR)
+const CUSTOMER_STRIPE_ID_COLUMN = 'stripe_customer_id'; // Added via ALTER TABLE
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

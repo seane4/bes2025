@@ -224,7 +224,7 @@ function generateConfirmationEmailHtml(orderId: string, customerName: string, it
           <li>If you have any questions or special requests, please don't hesitate to contact us.</li>
         </ul>
         
-        <p>For any inquiries, please contact our team at <a href="mailto:support@banffenergysummit.com">support@banffenergysummit.com</a>.</p>
+        <p>For any inquiries, please contact our team at <a href="mailto:Jana@tracts.co">Jana@tracts.co</a>.</p>
         
         <a href="https://banffenergysummit.com/my-registration" class="btn">View Your Registration</a>
       </div>
