@@ -1,21 +1,56 @@
 // Stripe Payments Integration for Banff Energy Summit 2025
+
+/**
+ * Shows or hides a loading indicator overlay.
+ * @param {boolean} isLoading - True to show the loading indicator, false to hide it.
+ */
+function showLoading(isLoading) {
+  const overlay = document.getElementById('loading-overlay'); // Make sure this element exists in your HTML
+
+  if (!overlay) {
+    console.warn('Loading overlay element (#loading-overlay) not found.');
+    return; // Exit if the overlay element doesn't exist
+  }
+
+  if (isLoading) {
+    console.log('Showing loading indicator...');
+    overlay.style.display = 'flex'; // Or 'block', depending on your CSS
+  } else {
+    console.log('Hiding loading indicator...');
+    overlay.style.display = 'none';
+  }
+}
+
+// --- ADD THIS LOG ---
+console.log('showLoading function defined:', typeof showLoading);
+// --- END ADD LOG ---
+
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize Stripe elements once the DOM is loaded
   if (window.location.pathname.includes('checkout.html')) {
-    // Wait for env-config.js to load
-    const checkStripeKey = setInterval(() => {
-      if (window.STRIPE_PUBLISHABLE_KEY) {
-        clearInterval(checkStripeKey);
+    // Wait for env-config.js to load and set window.ENV
+    const checkEnvConfig = setInterval(() => {
+      // Check for the nested ENV object and the specific key
+      if (window.ENV && window.ENV.STRIPE && window.ENV.STRIPE.PUBLISHABLE_KEY && window.ENV.SUPABASE && window.ENV.SUPABASE.URL) {
+        clearInterval(checkEnvConfig);
         initializeStripeElements();
-        initializeSupabase();
+        initializeSupabase(); // Initialize Supabase after config is ready
+
+        // --- EDIT: Call setupCheckoutFormSubmission AFTER initialization ---
+        setupCheckoutFormSubmission();
+        // --- END EDIT ---
+
       }
     }, 100);
 
     // Timeout after 5 seconds
     setTimeout(() => {
-      clearInterval(checkStripeKey);
-      if (!window.STRIPE_PUBLISHABLE_KEY) {
-        console.error('Failed to load Stripe publishable key');
+      clearInterval(checkEnvConfig);
+      // Update the check here as well
+      if (!window.ENV || !window.ENV.STRIPE || !window.ENV.STRIPE.PUBLISHABLE_KEY || !window.ENV.SUPABASE || !window.ENV.SUPABASE.URL) {
+        console.error('Failed to load Stripe publishable key or Supabase URL from ENV config');
+        // Optionally display user-facing error
+        showError('Payment system configuration error. Please try again later or contact support.');
       }
     }, 5000);
   }
@@ -32,32 +67,40 @@ let cardCvcElement;
 // Initialize Supabase client
 let supabase;
 
+// --- Make sure Supabase client is declared in a scope accessible by saveOrderToSupabase ---
+let supabaseClient = null;
+
 function initializeSupabase() {
-  if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
-    console.error('Supabase configuration missing');
+  console.log('Initializing Supabase client...');
+  if (!window.ENV || !window.ENV.SUPABASE || !window.ENV.SUPABASE.URL || !window.ENV.SUPABASE.ANON_KEY) {
+    console.error('Supabase URL or Anon Key not found in ENV config.');
+    showError('System configuration error. Please contact support.'); // Use your error display function
     return;
   }
-  
   try {
-    // Create Supabase client
-    supabase = supabaseClient.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
-    console.log('Supabase client initialized');
+    // Use createClient from the Supabase library (ensure it's loaded via CDN or npm)
+    supabaseClient = supabase.createClient(window.ENV.SUPABASE.URL, window.ENV.SUPABASE.ANON_KEY);
+    console.log('Supabase client initialized successfully.');
   } catch (error) {
-    console.error('Error initializing Supabase:', error);
+    console.error('Error initializing Supabase client:', error);
+    showError('Failed to connect to database services. Please try again later.');
   }
 }
 
 function initializeStripeElements() {
   console.log('Initializing Stripe elements...');
   
-  if (!window.STRIPE_PUBLISHABLE_KEY) {
-    console.error('Stripe publishable key not found');
+  // Use the ENV object for Stripe config
+  if (!window.ENV || !window.ENV.STRIPE || !window.ENV.STRIPE.PUBLISHABLE_KEY) {
+    console.error('Stripe publishable key not found in ENV config');
+    // Optionally display user-facing error
+    showError('Payment system configuration error. Please try again later or contact support.');
     return;
   }
   
   try {
-    // Initialize Stripe with the publishable key
-    stripe = Stripe(window.STRIPE_PUBLISHABLE_KEY);
+    // Initialize Stripe with the publishable key from window.ENV
+    stripe = Stripe(window.ENV.STRIPE.PUBLISHABLE_KEY);
     
     // Create Stripe elements
     elements = stripe.elements({
@@ -177,174 +220,328 @@ function mountStripeElements() {
   setupCheckoutFormSubmission();
 }
 
-function setupCheckoutFormSubmission() {
-  const checkoutButton = document.querySelector('.w-commerce-commercecheckoutplaceorderbutton');
-  const customerForm = document.getElementById('wf-form-Customer-Information'); // Ensure this ID matches your form
-  const paymentForm = document.getElementById('payment-form'); // Ensure this ID matches your payment form container
-  const paymentError = document.getElementById('payment-error');
+/**
+ * Validates the customer details form fields.
+ * @returns {boolean} True if the form is valid, false otherwise.
+ */
+function validateForm() {
+  console.log('Validating form...');
+  let isValid = true;
+  let firstErrorMessage = null;
 
-  if (!checkoutButton || !customerForm || !paymentForm) {
-    console.error('Checkout button, customer form, or payment form element not found.');
-    // Optionally display an error to the user
-    return;
+  // --- Helper to check a field and show error ---
+  function checkField(id, fieldName) {
+    const field = document.getElementById(id);
+    if (!field) {
+      console.error(`Validation Error: Element with ID "${id}" not found.`);
+      // Decide if this is critical enough to stop validation
+      // isValid = false;
+      // if (!firstErrorMessage) firstErrorMessage = `Configuration error: Missing form field "${fieldName}".`;
+      return; // Skip check if element doesn't exist
+    }
+
+    const value = field.value.trim();
+    if (!value) {
+      isValid = false;
+      const errorMsg = `${fieldName} is required.`;
+      // Optionally display error near the field (implementation depends on your HTML structure)
+      // showFieldError(field, errorMsg);
+      if (!firstErrorMessage) firstErrorMessage = errorMsg; // Store the first error found
+      console.warn(`Validation failed: ${fieldName} is empty (ID: ${id})`);
+    } else {
+      // Optionally clear error near the field
+      // clearFieldError(field);
+    }
   }
 
-  checkoutButton.addEventListener('click', async function(event) { // Make the handler async
-    event.preventDefault(); // Prevent default form submission
-    checkoutButton.value = 'Processing...'; // Update button text
-    checkoutButton.disabled = true; // Disable button
-    if (paymentError) paymentError.textContent = ''; // Clear previous errors
+  // --- Add checks for all your required fields ---
+  // ** IMPORTANT: Update these IDs to match your checkout.html form inputs **
+  checkField('billing-name', 'Billing Name'); // Example ID
+  checkField('billing-email', 'Email');       // Example ID
+  checkField('billing-address', 'Address');   // Example ID
+  checkField('billing-city', 'City');         // Example ID
+  checkField('billing-state', 'State');       // Example ID
+  checkField('billing-zip', 'ZIP Code');      // Example ID
+  checkField('billing-country', 'Country');   // Example ID
+  checkField('phone', 'Phone');             // Example ID (if you have phone)
+  // Add checks for other fields like shirt size, spouse info if they are required
 
-    // --- Form Validation (Keep your existing validation) ---
-    let isValid = true;
-    // Add checks for required fields if necessary
-    // Example:
-    // const emailInput = customerForm.querySelector('[name="email"]');
-    // if (!emailInput.value || !emailInput.checkValidity()) {
-    //   isValid = false;
-    //   // Add visual feedback for invalid field
-    // }
-    // ... add more validation as needed ...
+  // --- Check Stripe Elements (Card details are validated by Stripe itself, but check mount points) ---
+  // Basic check: Ensure Stripe elements are mounted (more complex validation happens via Stripe)
+  if (!window.stripeElements || !window.stripeElements.number || !window.stripeElements.expiry || !window.stripeElements.cvc) {
+      isValid = false;
+      const errorMsg = 'Payment card details are incomplete or not loaded correctly.';
+      if (!firstErrorMessage) firstErrorMessage = errorMsg;
+      console.error('Validation failed: Stripe elements not properly initialized/mounted.');
+  }
 
-    if (!isValid) {
-      console.error('Form validation failed.');
-      if (paymentError) paymentError.textContent = 'Please fill out all required fields correctly.';
-      checkoutButton.value = 'Place Order'; // Reset button text
-      checkoutButton.disabled = false; // Re-enable button
-      return; // Stop submission
+
+  if (!isValid && firstErrorMessage) {
+    console.error('Form validation failed:', firstErrorMessage);
+    // Use your existing error display function
+    handlePaymentError(firstErrorMessage); // Display the first error found to the user
+  } else if (isValid) {
+     console.log('Form validation passed.');
+     // Optionally clear any general form error message displayed by handlePaymentError
+     clearGeneralError(); // You might need to create this function
+  }
+
+  return isValid;
+}
+
+// Optional helper function to clear general errors (if handlePaymentError shows them in one place)
+function clearGeneralError() {
+    const errorDiv = document.getElementById('payment-error'); // Use the ID of your general error display area
+    if (errorDiv) {
+        errorDiv.textContent = '';
+        errorDiv.style.display = 'none';
     }
-    // --- End Form Validation ---
+}
 
+// --- Function to save order details to Supabase ---
+async function saveOrderToSupabase(paymentIntent, customerData, cartItems) {
+    console.log('Attempting to save order to Supabase...');
+    if (!supabaseClient) {
+        console.error('Supabase client not initialized. Cannot save order.');
+        // Optionally inform the user, though payment succeeded. This is more for backend logging.
+        // You might want to queue this for retry or log it server-side via another mechanism.
+        return { error: new Error('Supabase client not available.') };
+    }
+    if (!paymentIntent || !customerData || !cartItems) {
+         console.error('Missing data required to save order to Supabase.');
+         return { error: new Error('Missing data for Supabase save.') };
+    }
 
-    // Extract customer information
-    const customerData = {
-      email: customerForm.querySelector('[name="email"]').value,
-      primaryName: customerForm.querySelector('[name="primary_name"]').value,
-      phone: customerForm.querySelector('[name="primary_phone"]').value,
-      address: {
-        line1: customerForm.querySelector('[name="address_line1"]').value,
-        line2: customerForm.querySelector('[name="address_line2"]').value || '',
-        city: customerForm.querySelector('[name="city"]').value,
-        state: customerForm.querySelector('[name="state"]').value,
-        postal_code: customerForm.querySelector('[name="zip"]').value, // Ensure name="zip" matches your HTML
-        country: customerForm.querySelector('[name="country"]').value
-      },
-      shirtSize: customerForm.querySelector('[name="primary_shirt_size"]').value,
-      // --- EDIT START: Add Height and Weight ---
-      primaryHeight: customerForm.querySelector('[name="primary_height"]').value || '',
-      primaryWeight: customerForm.querySelector('[name="primary_weight"]').value || null, // Send null if empty, backend expects integer
-      // --- EDIT END ---
-      spouseName: customerForm.querySelector('[name="spouse_name"]').value || '',
-      spouseShirtSize: customerForm.querySelector('[name="spouse_shirt_size"]').value || '',
-      // --- EDIT START: Add Spouse Height and Weight ---
-      spouseHeight: customerForm.querySelector('[name="spouse_height"]').value || '',
-      spouseWeight: customerForm.querySelector('[name="spouse_weight"]').value || null, // Send null if empty, backend expects integer
-      // --- EDIT END ---
-      additionalGuestName: customerForm.querySelector('[name="additional_guest_name"]').value || '',
-      additionalGuestShirtSize: customerForm.querySelector('[name="additional_guest_shirt_size"]').value || '',
-      specialRequirements: customerForm.querySelector('[name="special_requirements"]').value || ''
-    };
-
-    // --- Get Cart Items (Keep your existing cart logic) ---
-    let cartItems = [];
     try {
-      cartItems = window.getCartItems ? window.getCartItems() : []; // Use your function to get cart items
-      if (!Array.isArray(cartItems) || cartItems.length === 0) {
-        throw new Error("Cart is empty or invalid.");
-      }
-      // Basic validation of cart items structure
-      cartItems.forEach(item => {
-        if (!item.id || !item.name || item.price === undefined || !item.quantity) {
-          console.warn("Invalid item structure in cart:", item);
-          // Decide if this is a critical error or if you can proceed
+        // ** Adjust column names to match your 'orders' table schema **
+        const orderData = {
+            customer_name: customerData.name,
+            customer_email: customerData.email,
+            amount: paymentIntent.amount, // Amount is already in cents from PaymentIntent
+            currency: paymentIntent.currency,
+            stripe_payment_intent_id: paymentIntent.id, // Store the PI ID
+            status: paymentIntent.status, // Should be 'succeeded' here
+            items: cartItems, // Store the cart items as JSONB
+            // Add address details if your table has columns for them
+            billing_address_line1: customerData.address?.line1,
+            billing_address_city: customerData.address?.city,
+            billing_address_state: customerData.address?.state,
+            billing_address_postal_code: customerData.address?.postal_code,
+            billing_address_country: customerData.address?.country,
+            // If using Supabase Auth, you might want to link the user ID
+            // user_id: (await supabaseClient.auth.getUser()).data.user?.id || null,
+        };
+
+        console.log('Order data prepared for Supabase:', orderData);
+
+        const { data, error } = await supabaseClient
+            .from('orders') // Your table name
+            .insert([orderData])
+            .select(); // Optionally select the inserted row back
+
+        if (error) {
+            console.error('Error saving order to Supabase:', error);
+            // Decide how critical this is. Payment succeeded, but DB save failed.
+            // Log this error for investigation. Maybe show a modified success message?
+            // Example: "Payment successful, but there was an issue saving your order details. Please contact support with ID: ..."
+            return { error }; // Return the error object
         }
-      });
+
+        console.log('Order successfully saved to Supabase:', data);
+        return { data }; // Return the inserted data
+
     } catch (error) {
-      console.error("Error getting or validating cart items:", error);
-      if (paymentError) paymentError.textContent = 'Error processing cart. Please refresh and try again.';
-      checkoutButton.value = 'Place Order';
+        console.error('Unexpected error during Supabase save:', error);
+        return { error };
+    }
+}
+
+function setupCheckoutFormSubmission() {
+  console.log('Setting up checkout form submission...'); // Added log
+
+  // --- EDIT: Add individual checks for elements ---
+  const checkoutForm = document.getElementById('checkout-form'); // Use your actual form ID
+  const customerForm = document.getElementById('customer-details-form'); // Use your actual customer details form ID
+  const paymentForm = document.getElementById('payment-form'); // Use your actual payment form ID (might be the same as checkout-form)
+  const checkoutButton = document.querySelector('.w-commerce-commercecheckoutplaceorderbutton'); // Use your actual button selector
+
+  let formToSubmit = checkoutForm || paymentForm; // Determine which form contains the button/triggers submission
+
+  // Log found elements for debugging
+  console.log('Checkout Form:', checkoutForm);
+  console.log('Customer Form:', customerForm);
+  console.log('Payment Form:', paymentForm);
+  console.log('Checkout Button:', checkoutButton);
+  console.log('Form to Submit:', formToSubmit);
+
+
+  // Check if essential elements exist
+  if (!formToSubmit) {
+      console.error('setupCheckoutFormSubmission Error: Could not find the main form element (tried #checkout-form or #payment-form).');
+      showError('Checkout form element not found. Please contact support.'); // User-facing error
+      return; // Stop if the main form is missing
+  }
+  if (!checkoutButton) {
+      console.error('setupCheckoutFormSubmission Error: Could not find the checkout button element (tried .w-commerce-commercecheckoutplaceorderbutton).');
+      showError('Checkout button not found. Please contact support.'); // User-facing error
+      return; // Stop if the button is missing
+  }
+  // You might not need separate customer/payment forms if it's all one form. Adjust checks as needed.
+  // if (!customerForm) {
+  //     console.warn('setupCheckoutFormSubmission Warning: Customer form element (#customer-details-form) not found.');
+  // }
+
+  // --- END EDIT ---
+
+
+  // Add event listener to the form that contains the submit button
+  formToSubmit.addEventListener('submit', async function(event) {
+    event.preventDefault(); // Prevent default form submission
+    console.log('Checkout form submitted.'); // Log submission attempt
+
+    // --- ADD THIS LOG ---
+    console.log('Checking showLoading right before call:', typeof showLoading);
+    // --- END ADD LOG ---
+
+    // Disable button to prevent multiple clicks
+    checkoutButton.disabled = true;
+    checkoutButton.value = 'Processing...'; // Update button text
+
+    // Show loading indicator (optional)
+    showLoading(true);
+
+    // 1. Validate form fields
+    if (!validateForm()) {
       checkoutButton.disabled = false;
+      checkoutButton.value = 'Place Order'; // Reset button text
+      showLoading(false);
+      return; // Stop if validation fails
+    }
+    console.log('Form validation passed.');
+
+    // 2. Collect customer data (ensure IDs match your HTML)
+    const customerData = {
+      name: document.getElementById('customer-name')?.value || '', // Example ID
+      email: document.getElementById('customer-email')?.value || '', // Example ID
+      phone: document.getElementById('customer-phone')?.value || '', // Example ID
+      // Add all other relevant fields: address, city, state, zip, country, shirtSize, etc.
+      address: document.getElementById('customer-address')?.value || '',
+      city: document.getElementById('customer-city')?.value || '',
+      state: document.getElementById('customer-state')?.value || '',
+      zip: document.getElementById('customer-zip')?.value || '',
+      country: document.getElementById('customer-country')?.value || '',
+      shirtSize: document.getElementById('shirt-size')?.value || '', // Example ID
+      // Add spouse/guest fields if applicable
+      spouseName: document.getElementById('spouse-name')?.value || '',
+      spouseShirtSize: document.getElementById('spouse-shirt-size')?.value || '',
+      // Add height/weight if applicable
+      height: document.getElementById('customer-height')?.value || '',
+      weight: document.getElementById('customer-weight')?.value || '',
+      spouseHeight: document.getElementById('spouse-height')?.value || '',
+      spouseWeight: document.getElementById('spouse-weight')?.value || '',
+    };
+    console.log('Collected customer data:', customerData);
+
+
+    // 3. Get cart items from localStorage
+    const cart = JSON.parse(localStorage.getItem('cart')) || [];
+    if (cart.length === 0) {
+      handlePaymentError('Your cart is empty.');
+      checkoutButton.disabled = false;
+      checkoutButton.value = 'Place Order';
+      showLoading(false);
       return;
     }
-    // --- End Get Cart Items ---
+    console.log('Cart items:', cart);
 
-    // --- Create Payment Intent ---
+    // 4. Create Payment Intent on the backend
     try {
-      const response = await fetch('/api/create-payment-intent', {
+      console.log('Creating Payment Intent...');
+      const response = await fetch('/api/create-payment-intent', { // Ensure this matches your API route
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          items: cartItems, // Send structured cart items
-          customerData: customerData // Send collected customer data
-        }),
+        body: JSON.stringify({ cart: cart, customerData: customerData }), // Send cart and customer data
       });
 
-      const { clientSecret, error: backendError } = await response.json();
+      const paymentIntentData = await response.json();
 
-      if (backendError || !clientSecret) {
-        throw new Error(backendError || 'Failed to create Payment Intent.');
+      if (!response.ok || paymentIntentData.error) {
+        throw new Error(paymentIntentData.error || `Server error: ${response.status}`);
       }
 
-      // --- Confirm Card Payment ---
-      if (!stripe || !cardElement) {
-         throw new Error('Stripe.js or Card Element not initialized.');
-      }
+      const clientSecret = paymentIntentData.clientSecret;
+      console.log('Payment Intent created successfully. Client Secret obtained.');
 
+      // 5. Confirm Card Payment with Stripe.js
+      console.log('Confirming card payment...');
       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
         clientSecret,
         {
           payment_method: {
-            card: cardElement,
+            card: window.stripeElements.number, // Use the mounted card number element
             billing_details: {
-              name: customerData.primaryName,
+              name: customerData.name,
               email: customerData.email,
               phone: customerData.phone,
-              address: customerData.address, // Pass the address object
+              address: {
+                line1: customerData.address,
+                city: customerData.city,
+                state: customerData.state,
+                postal_code: customerData.zip,
+                country: customerData.country, // Use ISO 2-letter country code if possible
+              },
             },
           },
-          // Optional: Add receipt_email if not relying solely on Stripe customer object
-          // receipt_email: customerData.email
         }
       );
 
       if (stripeError) {
-        console.error('Stripe Error:', stripeError);
-        // More specific error handling based on stripeError.type
-        if (stripeError.type === 'card_error' || stripeError.type === 'validation_error') {
-          if (paymentError) paymentError.textContent = stripeError.message || 'Payment failed. Please check your card details.';
-        } else {
-          if (paymentError) paymentError.textContent = 'An unexpected error occurred during payment.';
-        }
-        checkoutButton.value = 'Place Order';
+        // Show error to your customer (e.g., insufficient funds, card declined)
+        console.error('Stripe card confirmation error:', stripeError);
+        handlePaymentError(stripeError.message);
         checkoutButton.disabled = false;
-      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        console.log('Payment succeeded!');
-        // Redirect to a success page
-        window.location.href = '/order-confirmation'; // Adjust your success page URL
-        // Optionally clear the cart here if needed
-        // window.clearCartFunction();
-      } else if (paymentIntent) {
-         // Handle other statuses like 'requires_action' if necessary
-         console.log('Payment Intent status:', paymentIntent.status);
-         if (paymentError) paymentError.textContent = `Payment status: ${paymentIntent.status}. Please follow any additional instructions.`;
-         checkoutButton.value = 'Place Order'; // Or update based on status
-         checkoutButton.disabled = false; // Or manage based on status
+        checkoutButton.value = 'Place Order';
+        showLoading(false);
       } else {
-         // Handle unexpected scenarios where paymentIntent might be missing
-         throw new Error('Payment confirmation did not return expected status.');
-      }
-      // --- End Confirm Card Payment ---
+        // Payment succeeded
+        console.log('PaymentIntent details:', paymentIntent);
+        if (paymentIntent.status === 'succeeded') {
+          console.log('Payment succeeded!');
 
+          // --- EDIT: Save to Supabase AFTER successful payment ---
+          const { error: supabaseSaveError } = await saveOrderToSupabase(paymentIntent, customerData, cart);
+          if (supabaseSaveError) {
+            // Logged within the function. Decide if user needs specific feedback.
+            console.warn("Payment was successful, but saving order details failed.");
+            // You could potentially show a slightly different success message here
+            // or add a note to contact support if issues arise.
+          }
+          // --- END EDIT ---
+
+          // Proceed with showing success message and clearing cart regardless of DB save status (payment is done)
+          showPaymentSuccessMessage(customerData, cart, paymentIntent.amount, paymentIntent.id);
+          // No need to re-enable button or hide loading on success path
+
+        } else {
+           console.warn('Payment status:', paymentIntent.status);
+           handlePaymentError(`Payment status: ${paymentIntent.status}. Please contact support.`);
+           checkoutButton.disabled = false;
+           checkoutButton.value = 'Place Order';
+           showLoading(false);
+        }
+      }
     } catch (error) {
-      console.error('Error during checkout process:', error);
-      if (paymentError) paymentError.textContent = error.message || 'An error occurred. Please try again.';
-      checkoutButton.value = 'Place Order';
+      console.error('Error during payment process:', error);
+      handlePaymentError(error.message || 'An unexpected error occurred. Please try again.');
       checkoutButton.disabled = false;
+      checkoutButton.value = 'Place Order';
+      showLoading(false);
     }
-    // --- End Create Payment Intent ---
   });
+
+  console.log('Checkout form submission handler attached.'); // Added log
 }
 
 function validateCustomerForm() {

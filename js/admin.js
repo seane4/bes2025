@@ -1,11 +1,12 @@
 // Ensure Supabase variables are loaded from env-config.js
-if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
+if (!window.ENV || !window.ENV.SUPABASE || !window.ENV.SUPABASE.URL || !window.ENV.SUPABASE.ANON_KEY) {
     console.error('Supabase URL or Anon Key is missing. Check env-config.js');
     alert('Configuration error. Cannot initialize admin functions.');
+    return;
 }
 
 // Initialize Supabase client using the global 'supabase' object via window
-const supabase = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+const supabase = supabaseClient.createClient(window.ENV.SUPABASE.URL, window.ENV.SUPABASE.ANON_KEY);
 
 // DOM Elements
 const loginSection = document.getElementById('login-section');
