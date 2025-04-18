@@ -179,155 +179,172 @@ function mountStripeElements() {
 
 function setupCheckoutFormSubmission() {
   const checkoutButton = document.querySelector('.w-commerce-commercecheckoutplaceorderbutton');
-  const customerForm = document.querySelector('.w-commerce-commercecheckoutcustomerinfowrapper');
-  
-  if (checkoutButton) {
-    checkoutButton.addEventListener('click', function(event) {
-      event.preventDefault();
-      
-      // Validate the customer form
-      if (!validateCustomerForm()) {
-        return;
-      }
+  const customerForm = document.getElementById('wf-form-Customer-Information'); // Ensure this ID matches your form
+  const paymentForm = document.getElementById('payment-form'); // Ensure this ID matches your payment form container
+  const paymentError = document.getElementById('payment-error');
 
-      // Check if cart is empty
-      const cart = JSON.parse(localStorage.getItem('cart')) || [];
-      if (cart.length === 0) {
-        handlePaymentError('Your cart is empty. Please add items to your cart before checkout.');
-        return;
+  if (!checkoutButton || !customerForm || !paymentForm) {
+    console.error('Checkout button, customer form, or payment form element not found.');
+    // Optionally display an error to the user
+    return;
+  }
+
+  checkoutButton.addEventListener('click', async function(event) { // Make the handler async
+    event.preventDefault(); // Prevent default form submission
+    checkoutButton.value = 'Processing...'; // Update button text
+    checkoutButton.disabled = true; // Disable button
+    if (paymentError) paymentError.textContent = ''; // Clear previous errors
+
+    // --- Form Validation (Keep your existing validation) ---
+    let isValid = true;
+    // Add checks for required fields if necessary
+    // Example:
+    // const emailInput = customerForm.querySelector('[name="email"]');
+    // if (!emailInput.value || !emailInput.checkValidity()) {
+    //   isValid = false;
+    //   // Add visual feedback for invalid field
+    // }
+    // ... add more validation as needed ...
+
+    if (!isValid) {
+      console.error('Form validation failed.');
+      if (paymentError) paymentError.textContent = 'Please fill out all required fields correctly.';
+      checkoutButton.value = 'Place Order'; // Reset button text
+      checkoutButton.disabled = false; // Re-enable button
+      return; // Stop submission
+    }
+    // --- End Form Validation ---
+
+
+    // Extract customer information
+    const customerData = {
+      email: customerForm.querySelector('[name="email"]').value,
+      primaryName: customerForm.querySelector('[name="primary_name"]').value,
+      phone: customerForm.querySelector('[name="primary_phone"]').value,
+      address: {
+        line1: customerForm.querySelector('[name="address_line1"]').value,
+        line2: customerForm.querySelector('[name="address_line2"]').value || '',
+        city: customerForm.querySelector('[name="city"]').value,
+        state: customerForm.querySelector('[name="state"]').value,
+        postal_code: customerForm.querySelector('[name="zip"]').value, // Ensure name="zip" matches your HTML
+        country: customerForm.querySelector('[name="country"]').value
+      },
+      shirtSize: customerForm.querySelector('[name="primary_shirt_size"]').value,
+      // --- EDIT START: Add Height and Weight ---
+      primaryHeight: customerForm.querySelector('[name="primary_height"]').value || '',
+      primaryWeight: customerForm.querySelector('[name="primary_weight"]').value || null, // Send null if empty, backend expects integer
+      // --- EDIT END ---
+      spouseName: customerForm.querySelector('[name="spouse_name"]').value || '',
+      spouseShirtSize: customerForm.querySelector('[name="spouse_shirt_size"]').value || '',
+      // --- EDIT START: Add Spouse Height and Weight ---
+      spouseHeight: customerForm.querySelector('[name="spouse_height"]').value || '',
+      spouseWeight: customerForm.querySelector('[name="spouse_weight"]').value || null, // Send null if empty, backend expects integer
+      // --- EDIT END ---
+      additionalGuestName: customerForm.querySelector('[name="additional_guest_name"]').value || '',
+      additionalGuestShirtSize: customerForm.querySelector('[name="additional_guest_shirt_size"]').value || '',
+      specialRequirements: customerForm.querySelector('[name="special_requirements"]').value || ''
+    };
+
+    // --- Get Cart Items (Keep your existing cart logic) ---
+    let cartItems = [];
+    try {
+      cartItems = window.getCartItems ? window.getCartItems() : []; // Use your function to get cart items
+      if (!Array.isArray(cartItems) || cartItems.length === 0) {
+        throw new Error("Cart is empty or invalid.");
       }
-      
-      // Disable the button to prevent multiple submissions
-      checkoutButton.disabled = true;
-      checkoutButton.textContent = 'Processing...';
-      
-      // Extract customer information
-      const customerData = {
-        email: customerForm.querySelector('[name="email"]').value,
-        primaryName: customerForm.querySelector('[name="primary_name"]').value,
-        phone: customerForm.querySelector('[name="primary_phone"]').value,
-        address: {
-          line1: customerForm.querySelector('[name="address_line1"]').value,
-          line2: customerForm.querySelector('[name="address_line2"]').value || '',
-          city: customerForm.querySelector('[name="city"]').value,
-          state: customerForm.querySelector('[name="state"]').value,
-          postal_code: customerForm.querySelector('[name="zip"]').value,
-          country: customerForm.querySelector('[name="country"]').value
-        },
-        shirtSize: customerForm.querySelector('[name="primary_shirt_size"]').value,
-        spouseName: customerForm.querySelector('[name="spouse_name"]').value || '',
-        spouseShirtSize: customerForm.querySelector('[name="spouse_shirt_size"]').value || '',
-        additionalGuestName: customerForm.querySelector('[name="additional_guest_name"]').value || '',
-        additionalGuestShirtSize: customerForm.querySelector('[name="additional_guest_shirt_size"]').value || '',
-        specialRequirements: customerForm.querySelector('[name="special_requirements"]').value || ''
-      };
-      
-      // Calculate total amount
-      let subtotal = 0;
-      cart.forEach(item => {
-        if (item.type === 'activity') {
-          subtotal += parseFloat(item.price);
-        } else {
-          subtotal += parseFloat(item.total);
+      // Basic validation of cart items structure
+      cartItems.forEach(item => {
+        if (!item.id || !item.name || item.price === undefined || !item.quantity) {
+          console.warn("Invalid item structure in cart:", item);
+          // Decide if this is a critical error or if you can proceed
         }
       });
-      
-      const taxRate = 0.05; // 5% tax
-      const tax = subtotal * taxRate;
-      const total = subtotal + tax;
-      
-      // Process payment with Stripe
-      processPayment(customerData, cart, total)
-        .then(result => {
-          if (result.success) {
-            // Show success message
-            showPaymentSuccessMessage(customerData, cart, total, result.orderId);
-          } else {
-            // Show error message
-            handlePaymentError(result.error || 'An error occurred during payment processing');
-            // Re-enable the checkout button
-            checkoutButton.disabled = false;
-            checkoutButton.textContent = 'Place Order';
-          }
-        })
-        .catch(error => {
-          console.error('Payment error:', error);
-          handlePaymentError('An unexpected error occurred. Please try again later.');
-          checkoutButton.disabled = false;
-          checkoutButton.textContent = 'Place Order';
-        });
-    });
-  }
-}
+    } catch (error) {
+      console.error("Error getting or validating cart items:", error);
+      if (paymentError) paymentError.textContent = 'Error processing cart. Please refresh and try again.';
+      checkoutButton.value = 'Place Order';
+      checkoutButton.disabled = false;
+      return;
+    }
+    // --- End Get Cart Items ---
 
-async function processPayment(customerData, cart, totalAmount) {
-  // Note: totalAmount calculated client-side is NO LONGER USED for payment creation.
-  // It might still be useful for displaying to the user before they click "Pay".
-  // Ensure any display correctly formats cents to dollars (e.g., totalAmount / 100).
-  try {
-    // 1. Create PaymentMethod (still needed for card details)
-    const paymentMethodResult = await stripe.createPaymentMethod({
-      type: 'card',
-      card: cardNumberElement,
-      billing_details: {
-        name: customerData.primaryName,
-        email: customerData.email,
-        // Include other details if needed by Stripe/your setup
-        // phone: customerData.phone,
-        // address: customerData.address // Often collected by Stripe Elements Link/Payment Element
+    // --- Create Payment Intent ---
+    try {
+      const response = await fetch('/api/create-payment-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: cartItems, // Send structured cart items
+          customerData: customerData // Send collected customer data
+        }),
+      });
+
+      const { clientSecret, error: backendError } = await response.json();
+
+      if (backendError || !clientSecret) {
+        throw new Error(backendError || 'Failed to create Payment Intent.');
       }
-    });
-    
-    if (paymentMethodResult.error) {
-      console.error("PaymentMethod creation error:", paymentMethodResult.error);
-      return { success: false, error: paymentMethodResult.error.message };
-    }
-    const paymentMethodId = paymentMethodResult.paymentMethod.id;
 
-    // 2. Call your backend to create the Payment Intent
-    // Prepare only the necessary data: item IDs and quantities.
-    const cartForServer = cart.map(item => ({ id: item.id, quantity: item.quantity || 1 }));
-
-    const response = await fetch('/api/create-payment-intent', { // Ensure this path is correct
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ cart: cartForServer, customerEmail: customerData.email }),
-    });
-
-    const paymentIntentData = await response.json();
-
-    if (!response.ok || paymentIntentData.error) {
-      console.error("Error fetching client secret:", paymentIntentData.error || response.statusText);
-      return { success: false, error: paymentIntentData.error || 'Failed to initialize payment.' };
-    }
-
-    // 3. Confirm the Payment Intent on the client using the clientSecret from the server
-    const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
-      paymentIntentData.clientSecret, // The client secret returned by your backend
-      {
-        payment_method: paymentMethodId, // Attach the payment method collected
+      // --- Confirm Card Payment ---
+      if (!stripe || !cardElement) {
+         throw new Error('Stripe.js or Card Element not initialized.');
       }
-    );
 
-    if (confirmError) {
-      // Handle errors like insufficient funds, card declined, etc.
-      console.error('Stripe payment confirmation error:', confirmError);
-      return { success: false, error: confirmError.message };
+      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
+        clientSecret,
+        {
+          payment_method: {
+            card: cardElement,
+            billing_details: {
+              name: customerData.primaryName,
+              email: customerData.email,
+              phone: customerData.phone,
+              address: customerData.address, // Pass the address object
+            },
+          },
+          // Optional: Add receipt_email if not relying solely on Stripe customer object
+          // receipt_email: customerData.email
+        }
+      );
+
+      if (stripeError) {
+        console.error('Stripe Error:', stripeError);
+        // More specific error handling based on stripeError.type
+        if (stripeError.type === 'card_error' || stripeError.type === 'validation_error') {
+          if (paymentError) paymentError.textContent = stripeError.message || 'Payment failed. Please check your card details.';
+        } else {
+          if (paymentError) paymentError.textContent = 'An unexpected error occurred during payment.';
+        }
+        checkoutButton.value = 'Place Order';
+        checkoutButton.disabled = false;
+      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        console.log('Payment succeeded!');
+        // Redirect to a success page
+        window.location.href = '/order-confirmation'; // Adjust your success page URL
+        // Optionally clear the cart here if needed
+        // window.clearCartFunction();
+      } else if (paymentIntent) {
+         // Handle other statuses like 'requires_action' if necessary
+         console.log('Payment Intent status:', paymentIntent.status);
+         if (paymentError) paymentError.textContent = `Payment status: ${paymentIntent.status}. Please follow any additional instructions.`;
+         checkoutButton.value = 'Place Order'; // Or update based on status
+         checkoutButton.disabled = false; // Or manage based on status
+      } else {
+         // Handle unexpected scenarios where paymentIntent might be missing
+         throw new Error('Payment confirmation did not return expected status.');
+      }
+      // --- End Confirm Card Payment ---
+
+    } catch (error) {
+      console.error('Error during checkout process:', error);
+      if (paymentError) paymentError.textContent = error.message || 'An error occurred. Please try again.';
+      checkoutButton.value = 'Place Order';
+      checkoutButton.disabled = false;
     }
-
-    // 4. Payment successful! Redirect or show success message.
-    // Order saving and email sending are now handled by the webhook.
-    console.log('PaymentIntent confirmed successfully:', paymentIntent);
-    // You might redirect to a success page, passing the paymentIntent.id if needed
-    // e.g., window.location.href = `/checkout-success.html?payment_intent=${paymentIntent.id}`;
-    return { success: true, paymentIntentId: paymentIntent.id };
-
-  } catch (error) {
-    console.error('Error processing payment:', error);
-    return { success: false, error: error.message };
-  }
+    // --- End Create Payment Intent ---
+  });
 }
 
 function validateCustomerForm() {

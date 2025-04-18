@@ -10,13 +10,30 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Use Service
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // --- Define your Supabase table/column names ---
-// Ensure these match your actual schema AFTER applying ALTER commands
+// Ensure these match your actual schema from the migration file
 const ACTIVITIES_TABLE = 'activities'; // Table with your purchasable items
-const ACTIVITY_PK_COLUMN = 'id'; // Primary key of activities (UUID)
-const PRICE_COLUMN = 'price'; // Column name for price IN CENTS (INTEGER) in activities table
-const CUSTOMERS_TABLE = 'Customers'; // Case-sensitive table name from your setup
-const CUSTOMER_EMAIL_COLUMN = 'email'; // Column for customer email (VARCHAR)
-const CUSTOMER_STRIPE_ID_COLUMN = 'stripe_customer_id'; // Added via ALTER TABLE
+const ACTIVITY_PK_COLUMN = 'id'; // Primary key of activities (UUID or TEXT)
+const PRICE_COLUMN = 'price'; // Column name for price IN CENTS (integer) in ACTIVITIES_TABLE
+const CUSTOMERS_TABLE = 'customers'; // As defined in your webhook
+const CUSTOMER_EMAIL_COLUMN = 'email'; // Column for customer email
+const CUSTOMER_STRIPE_ID_COLUMN = 'stripe_customer_id'; // As defined in your webhook
+// Add column names from Customers table that we'll use/pass in metadata
+const CUSTOMER_NAME_COLUMN = 'name';
+const CUSTOMER_PHONE_COLUMN = 'phone';
+const CUSTOMER_ADDR1_COLUMN = 'address_line1';
+const CUSTOMER_ADDR2_COLUMN = 'address_line2';
+const CUSTOMER_CITY_COLUMN = 'city';
+const CUSTOMER_STATE_COLUMN = 'state';
+const CUSTOMER_POSTAL_CODE_COLUMN = 'postal_code';
+const CUSTOMER_COUNTRY_COLUMN = 'country';
+const CUSTOMER_SHIRT_SIZE_COLUMN = 'shirt_size';
+const CUSTOMER_HEIGHT_COLUMN = 'height';
+const CUSTOMER_WEIGHT_COLUMN = 'weight';
+const CUSTOMER_SPOUSE_NAME_COLUMN = 'spouse_name';
+const CUSTOMER_SPOUSE_SHIRT_SIZE_COLUMN = 'spouse_shirt_size';
+const CUSTOMER_SPOUSE_HEIGHT_COLUMN = 'spouse_height';
+const CUSTOMER_SPOUSE_WEIGHT_COLUMN = 'spouse_weight';
+// Add others if needed (e.g., additional_guest_name, special_requirements)
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -25,13 +42,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Expecting cart = [{ id: 'activity_uuid_or_text_id', quantity: 1 }, ...]
-    // Expecting customerEmail = 'user@example.com'
-    const { cart, customerEmail } = req.body;
+    // --- EDIT START: Receive full customerData object ---
+    // Expecting: { items: [...], customerData: { email: ..., primaryName: ..., address: {...}, primaryHeight: ..., etc. } }
+    const { items: cart, customerData } = req.body;
 
-    if (!cart || !Array.isArray(cart) || cart.length === 0 || !customerEmail) {
-      return res.status(400).json({ error: 'Invalid request body. Requires cart array and customerEmail.' });
+    // Validate essential parts
+    if (!cart || !Array.isArray(cart) || cart.length === 0 || !customerData || !customerData.email) {
+      return res.status(400).json({ error: 'Invalid request body. Requires items array and customerData object with email.' });
     }
+    // --- EDIT END ---
 
     // Validate cart items structure
     if (!cart.every(item => item.id && typeof item.quantity === 'number' && item.quantity > 0)) {
@@ -97,6 +116,8 @@ export default async function handler(req, res) {
 
     // 3. Find or Create Stripe Customer
     let stripeCustomerId;
+    const customerEmail = customerData.email; // Extract email
+
     // Check Supabase first if you store the mapping reliably
      const { data: dbCustomer, error: dbCustError } = await supabase
         .from(CUSTOMERS_TABLE)
@@ -112,7 +133,27 @@ export default async function handler(req, res) {
     if (dbCustomer && dbCustomer[CUSTOMER_STRIPE_ID_COLUMN]) {
         stripeCustomerId = dbCustomer[CUSTOMER_STRIPE_ID_COLUMN];
         console.log(`Found existing Stripe Customer ID in DB: ${stripeCustomerId}`);
-        // Optional: Verify this customer still exists in Stripe? Usually not necessary.
+        // --- EDIT START: Update existing Stripe customer with latest details ---
+        try {
+            await stripe.customers.update(stripeCustomerId, {
+                name: customerData.primaryName,
+                phone: customerData.phone,
+                address: { // Use the nested address object
+                    line1: customerData.address?.line1,
+                    line2: customerData.address?.line2,
+                    city: customerData.address?.city,
+                    state: customerData.address?.state,
+                    postal_code: customerData.address?.postal_code,
+                    country: customerData.address?.country,
+                },
+                // Add other fields Stripe supports if needed
+            });
+            console.log(`Updated existing Stripe Customer ${stripeCustomerId} with latest details.`);
+        } catch (stripeUpdateError) {
+            console.warn(`Failed to update Stripe Customer ${stripeCustomerId}:`, stripeUpdateError);
+            // Log error but continue, payment can likely still proceed
+        }
+        // --- EDIT END ---
     } else {
         // If not found in DB or DB check failed, query Stripe API
         console.log('Stripe Customer ID not found in DB or DB check failed, querying Stripe API...');
@@ -121,23 +162,73 @@ export default async function handler(req, res) {
         if (existingCustomers.data.length > 0) {
           stripeCustomerId = existingCustomers.data[0].id;
           console.log(`Found existing Stripe Customer via API: ${stripeCustomerId}`);
+          // --- EDIT START: Update existing Stripe customer with latest details ---
+          try {
+              await stripe.customers.update(stripeCustomerId, {
+                  name: customerData.primaryName,
+                  phone: customerData.phone,
+                  address: {
+                      line1: customerData.address?.line1,
+                      line2: customerData.address?.line2,
+                      city: customerData.address?.city,
+                      state: customerData.address?.state,
+                      postal_code: customerData.address?.postal_code,
+                      country: customerData.address?.country,
+                  },
+              });
+              console.log(`Updated existing Stripe Customer ${stripeCustomerId} via API with latest details.`);
+          } catch (stripeUpdateError) {
+              console.warn(`Failed to update Stripe Customer ${stripeCustomerId} found via API:`, stripeUpdateError);
+          }
+          // --- EDIT END ---
           // Optional: Update Supabase customer record with this Stripe Customer ID if missing
           if (!dbCustomer || !dbCustomer[CUSTOMER_STRIPE_ID_COLUMN]) {
-              // Perform update in Supabase (handle errors gracefully)
-              // ... update logic ...
+              const { error: updateSupabaseError } = await supabase
+                .from(CUSTOMERS_TABLE)
+                .update({ [CUSTOMER_STRIPE_ID_COLUMN]: stripeCustomerId })
+                .eq(CUSTOMER_EMAIL_COLUMN, customerEmail); // Match by email to update
+              if (updateSupabaseError) {
+                  console.error('Supabase error updating customer with Stripe ID:', updateSupabaseError);
+              } else {
+                  console.log(`Updated Supabase customer ${customerEmail} with Stripe ID ${stripeCustomerId}`);
+              }
           }
         } else {
           // Create new Stripe Customer
           console.log('Creating new Stripe Customer via API...');
+          // --- EDIT START: Create Stripe customer with more details ---
           const newStripeCustomer = await stripe.customers.create({
               email: customerEmail,
-              // Add name if available from client request body?
-              // name: customerData?.primaryName
+              name: customerData.primaryName,
+              phone: customerData.phone,
+              address: {
+                  line1: customerData.address?.line1,
+                  line2: customerData.address?.line2,
+                  city: customerData.address?.city,
+                  state: customerData.address?.state,
+                  postal_code: customerData.address?.postal_code,
+                  country: customerData.address?.country,
+              },
+              // Add metadata if needed, though we pass full data in PI metadata
           });
+          // --- EDIT END ---
           stripeCustomerId = newStripeCustomer.id;
           console.log(`Created new Stripe Customer via API: ${stripeCustomerId}`);
           // Optional: Create or update Supabase customer record with this Stripe Customer ID
-          // ... insert/update logic ... (Webhook also handles this, maybe redundant here)
+          // The webhook (`pages/api/webhook/stripe.js`) handles the comprehensive create/update,
+          // but we can ensure the stripe_customer_id is linked here if the customer already exists in Supabase.
+          if (dbCustomer && !dbCustomer[CUSTOMER_STRIPE_ID_COLUMN]) { // If customer existed in DB but lacked Stripe ID
+             const { error: updateSupabaseError } = await supabase
+                .from(CUSTOMERS_TABLE)
+                .update({ [CUSTOMER_STRIPE_ID_COLUMN]: stripeCustomerId })
+                .eq(CUSTOMER_EMAIL_COLUMN, customerEmail);
+             if (updateSupabaseError) {
+                 console.error('Supabase error updating customer with new Stripe ID:', updateSupabaseError);
+             } else {
+                 console.log(`Updated Supabase customer ${customerEmail} with new Stripe ID ${stripeCustomerId}`);
+             }
+          }
+          // If dbCustomer didn't exist at all, the webhook will create the full record.
         }
     }
 
@@ -148,12 +239,17 @@ export default async function handler(req, res) {
       currency: 'cad', // IMPORTANT: Use your correct currency code (e.g., 'usd', 'cad')
       customer: stripeCustomerId,
       automatic_payment_methods: { enabled: true }, // Recommended by Stripe
-      // --- CRUCIAL: Pass cart details for webhook ---
+      // --- EDIT START: Pass full customerData and cart details in metadata ---
       metadata: {
-        // Stringify the array for metadata storage
+        // Stringify complex objects/arrays for metadata
         cart_details: JSON.stringify(lineItemsForMetadata),
-        customer_email: customerEmail // Pass email explicitly for webhook fallback
+        // Store the entire customerData object as a string
+        // The webhook will parse this to get all details.
+        customer_details: JSON.stringify(customerData),
+        // Keep email separate for easier access/fallback if needed
+        customer_email: customerEmail
       },
+      // --- EDIT END ---
     });
 
     console.log(`Created Payment Intent: ${paymentIntent.id}`);

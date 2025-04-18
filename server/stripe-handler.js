@@ -1,3 +1,15 @@
+require('dotenv').config()
+const { createClient } = require('@supabase/supabase-js')
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY,
+  {
+    auth: {
+      persistSession: true,
+    },
+  }
+)
+
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const express = require('express');
 const router = express.Router();

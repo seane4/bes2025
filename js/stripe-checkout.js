@@ -732,55 +732,50 @@ window.updateOrderSummary = function() {
   const cartItems = JSON.parse(localStorage.getItem('cart')) || [];
   console.log('Cart items in updateOrderSummary:', cartItems);
   
-  // Try both price formats
-  // Method 1: Standard calculation (assuming price is in cents)
-  let subtotal = cartItems.reduce((sum, item) => {
-    const price = parseFloat(item.price) || 0;
-    const quantity = parseInt(item.quantity, 10) || 1;
-    return sum + (price * quantity);
-  }, 0);
-  
-  // Method 2: Alternative calculation (if prices are already in dollars)
-  let altSubtotal = cartItems.reduce((sum, item) => {
-    const price = parseFloat(item.price) || 0;
-    const quantity = parseInt(item.quantity, 10) || 1;
-    return sum + (price * quantity);
-  }, 0);
-  
-  // Choose the appropriate total based on results
-  // Do not change this to cents - ASSUME subtotal is already in dollars. Deleted the / 100.
-  let formattedSubtotal = subtotal.toFixed(2);
-  console.log('Standard calculation (cents): $' + formattedSubtotal);
-  console.log('Alternative calculation (dollars): $' + altSubtotal.toFixed(2));
-  
-  // If standard calculation gives zero but alt doesn't, use alt
-  if (cartItems.length > 0 && subtotal === 0 && altSubtotal > 0) {
-    console.log('Using alternative calculation method (prices appear to be in dollars already)');
-    formattedSubtotal = altSubtotal.toFixed(2);
-  }
-  
-  // Update displays
-  if (subtotalElement) {
-    subtotalElement.textContent = `$${formattedSubtotal}`;
-  }
-  
-  // For now, total equals subtotal (no discount)
-  if (totalElement) {
-    totalElement.textContent = `$${formattedSubtotal}`;
-  }
-  
-  // Update grand total display - THIS IS THE CRITICAL PART
-  if (grandTotalDisplay) {
-    grandTotalDisplay.textContent = `$${formattedSubtotal}`;
-    grandTotalDisplay.style.color = '#4CAF50';
-    grandTotalDisplay.style.fontWeight = 'bold';
-    console.log('Grand total display updated to:', formattedSubtotal);
-  } else {
-    console.warn('Grand total display element not found in DOM');
-  }
-  
-  // Fire event for other components that might need this information
-  window.dispatchEvent(new CustomEvent('grandTotalUpdated', { 
-    detail: { total: subtotal, formattedTotal: formattedSubtotal } 
-  }));
-}; 
+  // Find this loop within your updateOrderSummary or total calculation function
+  const cartItemElements = document.querySelectorAll('.checkout-item'); // Adjust selector if needed
+  let calculatedTotal = 0;
+
+  console.log(`Found ${cartItemElements.length} item elements for total calculation.`); // Log how many items it found
+
+  cartItemElements.forEach((itemElement, index) => {
+      console.log(`Processing item element ${index + 1}:`, itemElement);
+
+      // --- DEBUGGING PRICE EXTRACTION ---
+      // Adjust the selector '.item-price' to match where the price is displayed for each item
+      const priceElement = itemElement.querySelector('.item-price-each'); // Use the correct class for price per item
+
+      if (priceElement) {
+          console.log(`  Found price element for item ${index + 1}:`, priceElement);
+          const priceText = priceElement.textContent;
+          console.log(`  Raw price text content for item ${index + 1}: "${priceText}"`);
+
+          // Attempt to parse the price (adjust regex if needed based on format, e.g., remove $, commas)
+          // This example removes anything that isn't a digit or a decimal point.
+          const cleanedPriceText = priceText.replace(/[^0-9.]/g, '');
+          const price = parseFloat(cleanedPriceText);
+          console.log(`  Parsed price for item ${index + 1}: ${price}`); // Check if this is a valid number
+
+          if (!isNaN(price) && price > 0) {
+              // Now, get the quantity for this item (you might need to read this from the DOM too)
+              let quantity = 1; // Default to 1 if quantity isn't displayed/read
+              const quantityElement = itemElement.querySelector('.item-quantity'); // <<< ADJUST SELECTOR IF NEEDED
+              if (quantityElement) {
+                   // Clean the text content to remove non-digits before parsing
+                   const quantityText = quantityElement.textContent.replace(/[^0-9]/g, '');
+                   const quantityValue = parseInt(quantityText, 10);
+                   if (!isNaN(quantityValue) && quantityValue > 0) {
+                       quantity = quantityValue;
+                       console.log(`  Parsed quantity for item ${index + 1}: ${quantity}`); // Added log
+                   } else {
+                       console.warn(`  Failed to parse quantity for item ${index + 1}. Text: "${quantityElement.textContent}"`);
+                   }
+              } else {
+                   console.log(`  Quantity element not found for item ${index + 1}, assuming quantity is 1.`);
+              }
+          } else {
+              console.warn(`  Failed to parse price for item ${index + 1}. Text: "${priceText}"`);
+          }
+      } else {
+                   console.log(`  Quantity element not found for item ${index + 1}, assuming quantity is 1.`) }
+      }
