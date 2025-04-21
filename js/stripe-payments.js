@@ -457,19 +457,41 @@ function setupCheckoutFormSubmission() {
     // 4. Create Payment Intent on the backend
     try {
       console.log('Creating Payment Intent...');
-      const response = await fetch('/api/create-payment-intent', { // Ensure this matches your API route
+
+      // --- EDIT: Use environment config for the API endpoint ---
+      if (!window.ENV || !window.ENV.STRIPE || !window.ENV.STRIPE.ENDPOINTS || !window.ENV.STRIPE.ENDPOINTS.CREATE_PAYMENT_INTENT) {
+          throw new Error('Create Payment Intent endpoint configuration is missing.');
+      }
+      const createPaymentIntentUrl = window.ENV.STRIPE.ENDPOINTS.CREATE_PAYMENT_INTENT;
+      console.log(`Fetching from endpoint: ${createPaymentIntentUrl}`); // Log the URL being used
+      // --- END EDIT ---
+
+      const response = await fetch(createPaymentIntentUrl, { // Use the variable here
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ cart: cart, customerData: customerData }), // Send cart and customer data
+        body: JSON.stringify({ cart: cart, customerData: customerData }), // Send cartItems (ensure variable name consistency) and customer data
       });
 
-      const paymentIntentData = await response.json();
-
-      if (!response.ok || paymentIntentData.error) {
-        throw new Error(paymentIntentData.error || `Server error: ${response.status}`);
+      // --- EDIT: Improved error handling for non-JSON responses ---
+      if (!response.ok) {
+          const errorText = await response.text(); // Get raw text response
+          console.error('Server response (non-JSON):', errorText);
+          // Try to parse as JSON, but fallback to text if it fails
+          let errorJson = {};
+          try { errorJson = JSON.parse(errorText); } catch (e) { /* ignore parsing error */ }
+          throw new Error(errorJson.error || `Server error ${response.status}: ${errorText.substring(0, 200)}`); // Show beginning of text error if no JSON error message
       }
+      // --- END EDIT ---
+
+      const paymentIntentData = await response.json(); // Now we expect JSON if response.ok
+
+      // Original check remains useful if server sends { "error": "..." } with status 200
+      if (paymentIntentData.error) {
+        throw new Error(paymentIntentData.error);
+      }
+      // --- End Original Check ---
 
       const clientSecret = paymentIntentData.clientSecret;
       console.log('Payment Intent created successfully. Client Secret obtained.');
