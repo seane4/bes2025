@@ -1291,168 +1291,178 @@ function initCompleteRegistrationButton() {
 
 // Initialize checkout page functionality
 function initCheckoutPage() {
-  console.log('Initializing checkout page...');
-  
-  // Check if we're on the checkout page by looking for checkout-specific elements
-  const isCheckoutPage = window.location.pathname.includes('checkout.html');
-  console.log('Is checkout page:', isCheckoutPage);
-  
-  if (!isCheckoutPage) return; // Not on checkout page
+  console.log("Initializing checkout page...");
+  const cartItemsList = document.querySelector('.w-commerce-commercecheckoutorderitemslist');
+  const orderSummaryList = document.querySelector('.w-commerce-commercecheckoutordersummarywrapper .w-commerce-commercecheckoutsummaryitemlist'); // Target summary list
+  const subtotalAmount = document.querySelector('.w-commerce-commercecheckoutordersummarytotal.subtotal .w-commerce-commercecheckoutsummaryvalue');
+  const taxAmount = document.querySelector('.w-commerce-commercecheckoutordersummarytotal.tax .w-commerce-commercecheckoutsummaryvalue');
+  const totalAmount = document.querySelector('.w-commerce-commercecheckoutordersummarytotal.total .w-commerce-commercecheckoutsummaryvalue');
+  const checkoutForm = document.getElementById('checkout-form'); // Assuming your form has this ID
 
-  // Add event listener for URL parameters in case of payment redirect
-  checkForPaymentStatus();
-  
-  // Find all cart item lists
-  const cartItemsList = document.getElementById('checkout-items-list');
-  const orderSummaryList = document.getElementById('order-summary-list');
-  const subtotalAmount = document.getElementById('subtotal-amount');
-  const taxAmount = document.getElementById('tax-amount');
-  const totalAmount = document.getElementById('total-amount');
-  
-  console.log('Cart items list element:', cartItemsList);
-  console.log('Order summary list element:', orderSummaryList);
+  // Retrieve cart data
+  let cart = JSON.parse(localStorage.getItem('cart')) || [];
+  console.log("Checkout page cart data:", cart);
 
-  // Get cart data
-  const cart = JSON.parse(localStorage.getItem('cart')) || [];
-  console.log('Cart data:', cart);
+  // Clear existing items to prevent duplication if this runs multiple times
+  if (cartItemsList) cartItemsList.innerHTML = '';
+  if (orderSummaryList) orderSummaryList.innerHTML = '';
 
-  // Clear existing items
-  if (cartItemsList) {
-    cartItemsList.innerHTML = '';
-  }
-  
-  if (orderSummaryList) {
-    orderSummaryList.innerHTML = '';
-  }
-
-  // If the cart is empty, show a message and link to the registration page
   if (cart.length === 0) {
-    if (cartItemsList) {
-      const emptyMessage = document.createElement('div');
-      emptyMessage.className = 'empty-cart-message';
-      emptyMessage.innerHTML = `
-        <p>Your cart is empty.</p>
-        <a href="register-now.html" class="btn">Return to Registration</a>
-      `;
-      cartItemsList.appendChild(emptyMessage);
-    }
-    
-    // Update summary amounts to zero
+    console.log("Cart is empty, redirecting or showing empty message.");
+    // Optionally redirect to cart page or show an empty message
+    // window.location.href = '/cart.html'; // Example redirect
+    if (cartItemsList) cartItemsList.innerHTML = '<p>Your cart is empty.</p>';
     if (subtotalAmount) subtotalAmount.textContent = '$0.00';
     if (taxAmount) taxAmount.textContent = '$0.00';
     if (totalAmount) totalAmount.textContent = '$0.00';
-    
-    // Disable the checkout button
-    const checkoutButton = document.querySelector('.w-commerce-commercecheckoutplaceorderbutton');
-    if (checkoutButton) {
-      checkoutButton.disabled = true;
-      checkoutButton.style.opacity = '0.5';
-      checkoutButton.style.cursor = 'not-allowed';
-    }
-    
-    return;
+    // Disable checkout button if cart is empty
+    const submitButton = checkoutForm ? checkoutForm.querySelector('button[type="submit"], input[type="submit"]') : null;
+    if (submitButton) submitButton.disabled = true;
+    return; // Stop processing if cart is empty
   }
 
-  let subtotal = 0;
+  let subtotal = 0; // Initialize subtotal in cents
 
-  // Display cart items
+  // Populate cart items and order summary
   cart.forEach((item, index) => {
-    let itemPrice = 0;
-    let itemImage = '';
-    let itemDetails = '';
-    
-    if (item.type === 'activity') {
-      itemPrice = parseFloat(item.price);
-      itemImage = item.image || 'images/activity-placeholder.jpg';
-      itemDetails = `
+    let itemPriceInCents = parseInt(item.price, 10) || 0;
+    let itemImage = 'images/activity-placeholder.jpg'; // Default image
+    let itemTitle = item.name || 'Item';
+    let itemDetailsHtml = ''; // For the main item display
+    let summaryItemHtml = ''; // For the order summary list
+
+    // Ensure quantity is valid, default to 1 if missing or invalid
+    let quantity = parseInt(item.quantity, 10);
+    if (isNaN(quantity) || quantity < 1) {
+        quantity = 1;
+    }
+
+    subtotal += itemPriceInCents * quantity; // Calculate subtotal based on price and quantity
+
+    // --- Determine display based on item type ---
+    if (item.type === 'hotel') {
+      itemImage = 'images/deluxeimg-p-1080.webp'; // Correct fixed image path
+      itemTitle = item.name;
+      itemDetailsHtml = `
         <div class="checkout-item-details">
           <div class="checkout-item-info">
-            <h4>${item.title}</h4>
-            <p>Price: $${item.price}</p>
+            <h4 style="margin: 0 0 8px; font-size: 16px;">${itemTitle}</h4>
+            <p style="margin: 4px 0;">Check-in: ${item.details.checkIn}</p>
+            <p style="margin: 4px 0;">Check-out: ${item.details.checkOut}</p>
+            <p style="margin: 4px 0;">Guests: ${item.details.guests}</p>
+            <p style="margin: 4px 0;">Nights: ${item.details.nights}</p>
+            <p style="margin: 4px 0; font-weight: bold;">Total: $${(itemPriceInCents / 100).toFixed(2)}</p>
           </div>
         </div>
+      `;
+      summaryItemHtml = `
+        <div class="text-block-4">${itemTitle}</div>
+        <div class="text-block-7">$${(itemPriceInCents / 100).toFixed(2)}</div>
+      `;
+    } else if (item.type === 'activity') {
+      // itemImage = item.image || itemImage; // Optional: use activity image if available
+      itemTitle = item.name;
+      itemDetailsHtml = `
+        <div class="checkout-item-details">
+          <div class="checkout-item-info">
+            <h4 style="margin: 0 0 8px; font-size: 16px;">${itemTitle}</h4>
+            ${item.participantType ? `<p style="margin: 4px 0;">Participant: ${item.participantType}</p>` : ''}
+            <p style="margin: 4px 0;">Price: $${(itemPriceInCents / 100).toFixed(2)}</p>
+            ${quantity > 1 ? `<p style="margin: 4px 0;">Quantity: ${quantity}</p>` : ''}
+          </div>
+        </div>
+      `;
+      summaryItemHtml = `
+        <div class="text-block-4">${itemTitle} ${item.participantType ? `(${item.participantType})` : ''} ${quantity > 1 ? `x ${quantity}` : ''}</div>
+        <div class="text-block-7">$${((itemPriceInCents * quantity) / 100).toFixed(2)}</div>
+      `;
+    } else if (item.type === 'sponsorship') {
+      itemTitle = item.name;
+      itemDetailsHtml = `
+        <div class="checkout-item-details">
+          <div class="checkout-item-info">
+            <h4 style="margin: 0 0 8px; font-size: 16px;">${itemTitle}</h4>
+            <p style="margin: 4px 0;">Price: $${(itemPriceInCents / 100).toFixed(2)}</p>
+             ${quantity > 1 ? `<p style="margin: 4px 0;">Quantity: ${quantity}</p>` : ''}
+          </div>
+        </div>
+      `;
+      summaryItemHtml = `
+        <div class="text-block-4">${itemTitle} ${quantity > 1 ? `x ${quantity}` : ''}</div>
+        <div class="text-block-7">$${((itemPriceInCents * quantity) / 100).toFixed(2)}</div>
       `;
     } else {
-      // Accommodation item
-      itemPrice = parseFloat(item.total);
-      const roomImages = {
-        'Standard Room': 'images/Layer-6.jpg',
-        'Deluxe Room': 'images/goatcreekimg-comp.jpg',
-        'Junior Suite': 'images/hotelimg5.jpg',
-        'Executive Suite': 'images/reduced-imgbes.jpg'
-      };
-      itemImage = roomImages[item.roomType] || 'images/Layer-6.jpg';
-      itemDetails = `
-        <div class="checkout-item-details">
-          <div class="checkout-item-info">
-            <h4>${item.roomType}</h4>
-            <p>Check-in: ${item.checkInDate}</p>
-            <p>Check-out: ${item.checkOutDate}</p>
-            <p>Guests: ${item.guestCount}</p>
-            <p>Nights: ${item.nights}</p>
-            <p>Price per night: $${item.pricePerNight}</p>
-            <p>Total: $${item.total}</p>
-          </div>
-        </div>
-      `;
+        // Fallback for unknown item types
+        itemTitle = item.name || `Item ID: ${item.id}`;
+        itemDetailsHtml = `<div class="checkout-item-details"><p>Price: $${(itemPriceInCents / 100).toFixed(2)}</p> ${quantity > 1 ? `<p>Quantity: ${quantity}</p>` : ''}</div>`;
+        summaryItemHtml = `
+          <div class="text-block-4">${itemTitle} ${quantity > 1 ? `x ${quantity}` : ''}</div>
+          <div class="text-block-7">$${((itemPriceInCents * quantity) / 100).toFixed(2)}</div>
+        `;
     }
-    
-    // Add to cart items list if it exists
+
+    // --- Add item to the detailed list ---
     if (cartItemsList) {
       const itemElement = document.createElement('div');
       itemElement.className = 'w-commerce-commercecheckoutorderitem checkout-item';
       itemElement.innerHTML = `
-        <div class="checkout-item-content">
-          <div class="checkout-item-image-wrapper">
-            <img src="${itemImage}" alt="${item.type === 'activity' ? item.title : item.roomType}" class="checkout-item-image">
+        <div class="checkout-item-content" style="display: flex; align-items: flex-start; gap: 15px; padding: 10px 0; border-bottom: 1px solid #eee;">
+          <div class="checkout-item-image-wrapper" style="width: 80px; height: 80px; flex-shrink: 0;">
+            <img src="${itemImage}" alt="${itemTitle}" class="checkout-item-image" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;">
           </div>
-          ${itemDetails}
-          <button class="checkout-remove-btn" data-index="${index}">Remove</button>
+          <div style="flex-grow: 1;">${itemDetailsHtml}</div>
+          <button class="checkout-remove-btn" data-index="${index}" style="padding: 5px 10px; background: #e0e0e0; color: #333; border: none; border-radius: 4px; cursor: pointer; align-self: center;">Remove</button>
         </div>
       `;
       cartItemsList.appendChild(itemElement);
     }
 
-    // Add to order summary if it exists
+    // --- Add item to the order summary list ---
     if (orderSummaryList) {
       const summaryItem = document.createElement('div');
       summaryItem.className = 'w-commerce-commercecheckoutsummarylineitem';
-      summaryItem.innerHTML = `
-        <div class="text-block-4">${item.type === 'activity' ? item.title : item.roomType}</div>
-        <div class="text-block-7">$${itemPrice.toFixed(2)}</div>
-      `;
+      summaryItem.innerHTML = summaryItemHtml;
       orderSummaryList.appendChild(summaryItem);
     }
+  }); // End of cart.forEach loop
 
-    subtotal += itemPrice;
-  });
-
-  // Calculate tax and total
+  // --- Calculate and display totals ---
   const taxRate = 0.05; // 5% tax rate
-  const tax = subtotal * taxRate;
-  const total = subtotal + tax;
+  // Calculate tax based on subtotal in cents
+  const taxInCents = Math.round(subtotal * taxRate);
+  const totalInCents = subtotal + taxInCents;
 
-  // Update summary amounts
-  if (subtotalAmount) subtotalAmount.textContent = `$${subtotal.toFixed(2)}`;
-  if (taxAmount) taxAmount.textContent = `$${tax.toFixed(2)}`;
-  if (totalAmount) totalAmount.textContent = `$${total.toFixed(2)}`;
+  // Update summary amounts (displaying as dollars)
+  if (subtotalAmount) subtotalAmount.textContent = `$${(subtotal / 100).toFixed(2)}`;
+  if (taxAmount) taxAmount.textContent = `$${(taxInCents / 100).toFixed(2)}`;
+  if (totalAmount) totalAmount.textContent = `$${(totalInCents / 100).toFixed(2)}`;
 
-  // Add event listeners to remove buttons in checkout page
-  const checkoutRemoveButtons = document.querySelectorAll('.checkout-remove-btn');
-  checkoutRemoveButtons.forEach(button => {
-    button.addEventListener('click', function() {
-      const index = parseInt(this.getAttribute('data-index'));
-      removeCartItemFromCheckout(index);
-    });
+  // --- Add event listeners to remove buttons ---
+  const removeButtons = document.querySelectorAll('.checkout-remove-btn');
+  removeButtons.forEach(button => {
+    // Prevent adding multiple listeners if function runs again
+    if (!button.getAttribute('data-listener-added')) {
+        button.addEventListener('click', function() {
+            const index = parseInt(this.getAttribute('data-index'));
+            removeCartItem(index); // Assumes removeCartItem exists and updates localStorage
+            initCheckoutPage(); // Re-initialize the checkout display after removal
+        });
+        button.setAttribute('data-listener-added', 'true');
+    }
   });
-  
-  // Initialize the discount code button
-  const applyDiscountBtn = document.getElementById('apply-discount-btn');
-  if (applyDiscountBtn) {
-    applyDiscountBtn.addEventListener('click', function() {
-      handleDiscountCode();
-    });
+
+  // --- Add form submission handler ---
+  if (checkoutForm) {
+    // Prevent multiple listeners
+    if (!checkoutForm.getAttribute('data-listener-added')) {
+        checkoutForm.addEventListener('submit', handleCheckoutSubmit); // Assumes handleCheckoutSubmit exists
+        checkoutForm.setAttribute('data-listener-added', 'true');
+    }
+  } else {
+    console.error("Checkout form not found.");
   }
+
+  console.log("Checkout page initialization complete.");
 }
 
 // Initialize cart functionality
