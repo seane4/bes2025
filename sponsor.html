@@ -643,99 +643,145 @@
   
   <!-- Sponsor Page Activity Cards JavaScript -->
   <script>
-    // Function to handle adding items from buttons (Activities & Sponsorships)
-    function addToCartFromButton(buttonElement) {
-        // Find the closest relevant container (might be .activity-card or similar)
-        const card = buttonElement.closest('.activity-card'); // Adjust selector if sponsor cards use a different class
-        if (!card) {
-            console.error("Could not find parent card element for the clicked button.");
-            return;
+    document.addEventListener('DOMContentLoaded', function() {
+      // Handle description changes on variant select
+      const variantSelects = document.querySelectorAll('.variant-select');
+      
+      variantSelects.forEach(select => {
+        select.addEventListener('change', function() {
+          const description = this.options[this.selectedIndex].getAttribute('data-description');
+          const descriptionElement = this.parentElement.querySelector('.variant-description');
+          if (descriptionElement && description) {
+            descriptionElement.textContent = description;
+          }
+        });
+      });
+      
+      // Handle Add to Cart buttons
+      const addToCartButtons = document.querySelectorAll('.activity-add-btn btn');
+      
+      addToCartButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          const card = this.closest('.activity-card');
+          const title = card.querySelector('.activity-title').textContent;
+          const priceData = card.getAttribute('data-price');
+          let price = parseInt(priceData, 10) || 0;
+          
+          // Get variant information if available
+          let variant = '';
+          const variantSelect = card.querySelector('.variant-select');
+          if (variantSelect) {
+            variant = variantSelect.options[variantSelect.selectedIndex].textContent;
+            
+            // If there's a price in the variant text (like "Bronze Level ($5,000)"), update the price
+            const priceMatch = variant.match(/\$([0-9,]+)/);
+            if (priceMatch && priceMatch[1]) {
+              price = parseInt(priceMatch[1].replace(/,/g, ''), 10);
+            }
+          }
+          
+          const item = {
+            type: 'activity',
+            title: title,
+            price: price,
+            image: card.querySelector('.activity-image img').src,
+            variant: variant
+          };
+          
+          // Add to cart (localStorage)
+          addItemToCart(item);
+          // Update cart count
+          updateCartCount();
+        });
+      });
+      
+      // Helper functions
+      function addItemToCart(item) {
+        let cart = JSON.parse(localStorage.getItem('cart')) || [];
+        cart.push(item);
+        localStorage.setItem('cart', JSON.stringify(cart));
+      }
+      
+      function updateCartCount() {
+        if (typeof updateCartDisplay === 'function') {
+          updateCartDisplay();
+        } else {
+          const cart = JSON.parse(localStorage.getItem('cart')) || [];
+          const cartCountElements = document.querySelectorAll('.cart-quantity-cart');
+          cartCountElements.forEach(element => {
+            element.textContent = cart.length;
+          });
         }
-
-        // Sponsorships generally don't have a guest select, so we skip that part.
-        // const guestSelect = card.querySelector('.guest-select');
-        // const participantValue = guestSelect ? guestSelect.value : 'single';
-
-        const productId = buttonElement.dataset.productId;
+      }
+      
+      // Initialize cart count on page load
+      updateCartCount();
+    });
+  </script>
+  <script>
+    // Function to handle adding SPONSORSHIPS from buttons
+    function addSponsorshipToCart(buttonElement) {
+        // --- Get data from button attributes ---
+        const productId = buttonElement.dataset.productId; // Expecting unique ID (UUID preferably)
         const productName = buttonElement.dataset.productName;
-        const productPrice = parseInt(buttonElement.dataset.productPrice, 10); // Price in cents
+        const productPrice = parseInt(buttonElement.dataset.productPrice, 10); // Expecting price IN CENTS
+        const productImage = buttonElement.dataset.productImage || 'images/sponsor-placeholder.jpg'; // Get image or use default
 
+        // --- Validate data ---
         if (!productId || !productName || isNaN(productPrice)) {
-            console.error("Button is missing required data attributes (data-product-id, data-product-name, data-product-price):", buttonElement);
-            alert('Error: Item data is missing.'); // User feedback
+            console.error("Button is missing required data attributes or price is invalid:", buttonElement);
+            alert("Error: Could not add item. Missing product information.");
             return;
         }
 
-        // Sponsorships have quantity 1 and no specific participant type like activities
-        const quantity = 1;
-        const participantType = null; // Or 'sponsor' if you want to track type
-
+        // *** Create the standardized sponsorship item ***
         const newItem = {
             id: productId,
-            type: 'sponsorship', // Explicitly mark type
+            type: 'sponsorship', // Set the type
             name: productName,
-            price: productPrice, // Price in cents
-            quantity: quantity,
-            // No participantType needed for sponsors
-            // No details needed unless specific sponsor data is required
+            price: productPrice, // Price IN CENTS
+            quantity: 1,
+            image: productImage // Add image
+            // No participantType or details needed
         };
 
+        // --- Cart Update Logic ---
         let cart = JSON.parse(localStorage.getItem('cart')) || [];
-        const existingItemIndex = cart.findIndex(item => item.id === productId);
+        const existingItemIndex = cart.findIndex(item => item.id === newItem.id);
 
         if (existingItemIndex > -1) {
-            // Optional: Decide if sponsors can be added multiple times or just updated/replaced
-            console.log(`Sponsorship ${productId} is already in the cart. Replacing.`);
-            cart[existingItemIndex] = newItem; // Replace existing
+            alert(`${newItem.name} is already in your cart.`);
+            return; // Don't add again
         } else {
-            console.log(`Adding new sponsorship ${productId} to cart.`);
             cart.push(newItem);
         }
-
         localStorage.setItem('cart', JSON.stringify(cart));
 
         // --- UI Updates ---
+        // Assumes updateCartDisplay is globally available (from index.js)
         if (typeof updateCartDisplay === 'function') {
             updateCartDisplay();
-        } else {
-            console.warn("updateCartDisplay function not found. Cart UI may not reflect changes.");
-            // Fallback count update
-            try {
-                 const cartCountElements = document.querySelectorAll('.cart-quantity-cart');
-                 cartCountElements.forEach(element => {
-                     element.textContent = cart.length;
-                 });
-            } catch (e) { console.error("Fallback cart count update failed:", e); }
         }
-
-        // Visual feedback on the button
+        // Add visual feedback
+        const originalText = buttonElement.textContent;
         buttonElement.textContent = 'Added!';
-        buttonElement.disabled = true;
-        buttonElement.classList.add('added');
-
+        buttonElement.disabled = true; // Optionally disable after adding
         setTimeout(() => {
-            buttonElement.textContent = 'Add to Cart';
-            buttonElement.disabled = false;
-            buttonElement.classList.remove('added');
-        }, 1500);
+            buttonElement.textContent = originalText;
+            buttonElement.disabled = false; // Re-enable if needed
+        }, 2000);
     }
 
-    // Initialize cart display on page load
+    // Add event listeners to all sponsorship 'Add to Cart' buttons on this page
     document.addEventListener('DOMContentLoaded', () => {
-      if (typeof updateCartDisplay === 'function') {
-        updateCartDisplay();
-      } else {
-         // Fallback count update on load
-         try {
-             const cart = JSON.parse(localStorage.getItem('cart')) || [];
-             const cartCountElements = document.querySelectorAll('.cart-quantity-cart');
-             cartCountElements.forEach(element => {
-                 element.textContent = cart.length;
-             });
-         } catch (e) { console.error("Fallback cart count update failed on load:", e); }
-      }
+        document.querySelectorAll('.add-sponsor-to-cart-btn').forEach(button => { // Ensure buttons have this class
+            button.addEventListener('click', () => addSponsorshipToCart(button));
+        });
+         // Initial cart display update if the cart display element exists on this page
+         if (typeof updateCartDisplay === 'function' && document.getElementById('cart-items-container')) { // Check if cart display exists
+            updateCartDisplay();
+        }
     });
-
   </script>
 </body>
 </html>

@@ -27,13 +27,10 @@ CREATE TABLE customers (
 -- Create orders table
 CREATE TABLE orders (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  order_id VARCHAR(100) NOT NULL UNIQUE,
-  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
-  subtotal DECIMAL(10, 2) NOT NULL,
-  tax DECIMAL(10, 2) NOT NULL,
-  total DECIMAL(10, 2) NOT NULL,
-  payment_method VARCHAR(50) NOT NULL,
-  transaction_id VARCHAR(255),
+  custom                                                      er_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  amount INTEGER,
+  currency VARCHAR(3),
+  stripe_payment_intent_id VARCHAR(255) UNIQUE,
   status VARCHAR(50) NOT NULL DEFAULT 'pending',
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
@@ -97,8 +94,8 @@ CREATE TABLE payment_logs (
 
 -- Create indices for performance
 CREATE INDEX idx_customers_email ON customers (email);
-CREATE INDEX idx_orders_order_id ON orders (order_id);
 CREATE INDEX idx_orders_customer_id ON orders (customer_id);
+CREATE INDEX idx_orders_stripe_payment_intent_id ON orders (stripe_payment_intent_id);
 CREATE INDEX idx_order_items_order_id ON order_items (order_id);
 CREATE INDEX idx_payment_logs_order_id ON payment_logs (order_id);
 CREATE INDEX idx_payment_logs_transaction_id ON payment_logs (transaction_id);
@@ -154,8 +151,9 @@ CREATE POLICY admin_all_access ON customers
   USING (auth.jwt() ->> 'role' = 'admin');
 
 CREATE POLICY admin_all_access ON orders 
-  TO authenticated
-  USING (auth.jwt() ->> 'role' = 'admin');
+  FOR ALL
+  USING (auth.jwt() ->> 'role' = 'admin')
+  WITH CHECK (auth.jwt() ->> 'role' = 'admin');
 
 CREATE POLICY admin_all_access ON order_items 
   TO authenticated
@@ -178,7 +176,7 @@ CREATE POLICY create_customers ON customers
   TO anon
   WITH CHECK (true);
 
-CREATE POLICY create_orders ON orders
+CREATE POLICY create_orders_anon ON orders
   FOR INSERT
   TO anon
   WITH CHECK (true);
@@ -201,17 +199,25 @@ CREATE OR REPLACE FUNCTION admin.get_order_details(order_id_param TEXT)
 RETURNS JSONB AS $$
 DECLARE
   order_data JSONB;
+  target_order_id UUID;
 BEGIN
-  SELECT 
+  -- Attempt to cast the input parameter to UUID
+  BEGIN
+    target_order_id := order_id_param::UUID;
+  EXCEPTION WHEN invalid_text_representation THEN
+    -- Handle cases where the input is not a valid UUID if necessary
+    -- Or maybe query by stripe_payment_intent_id if that's passed instead?
+    -- For now, assume input is the order's UUID primary key
+    RAISE EXCEPTION 'Invalid Order ID format. Please provide a valid UUID.';
+  END;
+
+  SELECT
     jsonb_build_object(
       'order', jsonb_build_object(
         'id', o.id,
-        'order_id', o.order_id,
-        'subtotal', o.subtotal,
-        'tax', o.tax,
-        'total', o.total,
-        'payment_method', o.payment_method,
-        'transaction_id', o.transaction_id,
+        'amount', o.amount,
+        'currency', o.currency,
+        'stripe_payment_intent_id', o.stripe_payment_intent_id,
         'status', o.status,
         'created_at', o.created_at
       ),
@@ -227,12 +233,12 @@ BEGIN
         'postal_code', c.postal_code,
         'country', c.country,
         'shirt_size', c.shirt_size,
-        'height', c.height, -- Added height
-        'weight', c.weight, -- Added weight
+        'height', c.height,
+        'weight', c.weight,
         'spouse_name', c.spouse_name,
         'spouse_shirt_size', c.spouse_shirt_size,
-        'spouse_height', c.spouse_height, -- Added spouse_height
-        'spouse_weight', c.spouse_weight, -- Added spouse_weight
+        'spouse_height', c.spouse_height,
+        'spouse_weight', c.spouse_weight,
         'additional_guest_name', c.additional_guest_name,
         'additional_guest_shirt_size', c.additional_guest_shirt_size,
         'special_requirements', c.special_requirements
@@ -246,7 +252,8 @@ BEGIN
             'item_name', oi.item_name,
             'quantity', oi.quantity,
             'price', oi.price,
-            'total', oi.total
+            'total', oi.total,
+            'participant_type', oi.participant_type
           )
         )
         FROM order_items oi
@@ -255,7 +262,7 @@ BEGIN
     ) INTO order_data
   FROM orders o
   JOIN customers c ON o.customer_id = c.id
-  WHERE o.order_id = order_id_param;
+  WHERE o.id = target_order_id;
   
   RETURN order_data;
 END;
