@@ -1313,18 +1313,7 @@ function initCompleteRegistrationButton() {
 
 // Initialize checkout page functionality
 function initCheckoutPage() {
-  console.log('Initializing checkout page...');
-  
-  // Check if we're on the checkout page by looking for checkout-specific elements
-  const isCheckoutPage = window.location.pathname.includes('checkout.html');
-  console.log('Is checkout page:', isCheckoutPage);
-  
-  if (!isCheckoutPage) return; // Not on checkout page
-
-  // Add event listener for URL parameters in case of payment redirect
-  checkForPaymentStatus();
-  
-  // Find all cart item lists
+  console.log('%cInitializing checkout page...', 'color: green; font-weight: bold;');
   const cartItemsList = document.getElementById('checkout-items-list');
   const orderSummaryList = document.getElementById('order-summary-list');
   const subtotalAmount = document.getElementById('subtotal-amount');
@@ -1466,6 +1455,7 @@ function initCheckoutPage() {
       const index = parseInt(this.getAttribute('data-index'));
       removeCartItemFromCheckout(index);
     });
+
   });
   
   // Initialize the discount code button

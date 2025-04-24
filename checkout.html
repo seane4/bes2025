@@ -30,90 +30,6 @@
   <script src="js/stripe-checkout.js" defer></script>
   <script src="js/stripe-payments.js" defer></script>
   <script src="js/stripe-test.js" defer></script>
-  <!-- Simple Cart Total Calculator -->
-  <script>
-    // This single script will calculate and display the grand total
-    // It runs before any other scripts can interfere
-    document.addEventListener('DOMContentLoaded', function() {
-      function calculateGrandTotal() {
-        // Get cart from localStorage
-        // Ensure cart is an array, even if localStorage stores a single object incorrectly
-        let rawCartData = JSON.parse(localStorage.getItem('cart')) || [];
-        let cart = Array.isArray(rawCartData) ? rawCartData : [rawCartData]; // Force into array if it's not
-
-        // Filter out potentially invalid entries if cart wasn't an array initially
-        cart = cart.filter(item => item && typeof item === 'object' && item.price !== undefined);
-
-        console.log('Cart items found:', cart.length);
-        console.log('Raw cart data used for calculation:', JSON.stringify(cart, null, 2));
-
-        // Calculate total
-        let total = 0;
-        cart.forEach(item => {
-          // Assuming item.price is stored in cents (e.g., 18000 for $180.00)
-          const price = parseFloat(item.price) || 0; // Convert cents to dollars
-          const quantity = parseInt(item.quantity, 10) || 1;
-          const itemTotal = price * quantity;
-          console.log(`Item: ${item.name || item.title || 'Unknown'}`);
-          console.log(`  Raw price value: ${item.price} (type: ${typeof item.price})`);
-          console.log(`  Parsed price (assuming cents): $${price.toFixed(2)}`);
-          console.log(`  Quantity: ${quantity}`);
-          console.log(`  Item total: $${itemTotal.toFixed(2)}`);
-          total += itemTotal;
-        });
-
-        // Format total - Now correctly assuming 'total' is in dollars after conversion
-        const formattedTotal = total.toFixed(2);
-        console.log('Grand total calculated (after converting from cents):', formattedTotal);
-
-        // Update display
-        const grandTotalDisplay = document.getElementById('grand-total-display');
-        if (grandTotalDisplay) {
-          grandTotalDisplay.textContent = '$' + formattedTotal;
-          grandTotalDisplay.style.color = '#4CAF50'; // Or keep original style
-          grandTotalDisplay.style.fontWeight = 'bold'; // Or keep original style
-          console.log('Grand total display updated successfully to: $' + formattedTotal);
-        } else {
-          console.error('Grand total display element not found');
-        }
-
-        // Adjusted warning message
-        if (cart.length > 0 && total === 0) {
-          console.error('WARNING: Cart has items but total is $0.00. Check that item.price exists and is a non-zero number in localStorage.');
-          if(cart[0]) {
-            console.log('First item price value:', cart[0].price);
-          }
-        }
-      }
-
-      // Calculate immediately
-      calculateGrandTotal();
-
-      // Update when cart is changed
-      window.addEventListener('cartUpdated', calculateGrandTotal);
-
-      // Expose the function globally so other scripts can call it directly
-      window.calculateGrandTotal = calculateGrandTotal;
-
-      // Add a check button for debugging
-      const debugButton = document.createElement('button');
-      debugButton.textContent = 'Debug Grand Total';
-      debugButton.style.position = 'fixed';
-      debugButton.style.bottom = '100px';
-      debugButton.style.right = '20px';
-      debugButton.style.padding = '10px';
-      debugButton.style.background = '#4CAF50';
-      debugButton.style.color = 'white';
-      debugButton.style.border = 'none';
-      debugButton.style.borderRadius = '4px';
-      debugButton.style.zIndex = '9999';
-      debugButton.addEventListener('click', function() {
-        calculateGrandTotal();
-        alert('Check console for detailed cart information and calculation steps');
-      });
-      document.body.appendChild(debugButton);
-    });
-  </script>
 </head>
 <body>
   <div class="menu-wrapper">
@@ -386,11 +302,10 @@
             <form data-node-type="commerce-checkout-discount-form" class="w-commerce-commercecheckoutdiscounts">
               <label for="wf-ecom-discounts" class="w-commerce-commercecheckoutdiscountslabel field-label-9">Discount Code</label>
               <input data-node-type="commerce-checkout-discount-input" class="w-commerce-commercecheckoutdiscountsinput w-input" maxlength="256" name="" data-name="field" placeholder="" type="text" id="wf-ecom-discounts">
-              <button type="button" aria-label="Apply Discount" id="apply-discount-btn" class="w-commerce-commercecheckoutdiscountsbutton btn" onclick="handleDiscountCode()">Apply</button>
+              <button type="button" aria-label="Apply Discount" id="apply-discount-btn" class="w-commerce-commercecheckoutdiscountsbutton btn">Apply</button>
             </form>
-            
           </div>
-
+          
           <div class="w-commerce-commercecheckoutpaymentsummarywrapper">
             <div class="w-commerce-commercecheckoutblockheader">
               <h4>Payment Info</h4>
@@ -530,6 +445,20 @@
         });
       }
       
+      // Add discount code button handler
+      const discountBtn = document.getElementById('apply-discount-btn');
+      if (discountBtn) {
+        discountBtn.addEventListener('click', function() {
+          const discountInput = document.getElementById('wf-ecom-discounts');
+          if (discountInput && discountInput.value) {
+            alert('Discount code applied: ' + discountInput.value);
+            // Add your discount logic here
+          } else {
+            alert('Please enter a discount code');
+          }
+        });
+      }
+      
       // Debug function to check cart contents
       window.debugCheckCart = function() {
         const cart = JSON.parse(localStorage.getItem('cart')) || [];
@@ -560,8 +489,8 @@
       debugButton.style.border = '1px solid #ccc';
       debugButton.style.borderRadius = '4px';
       debugButton.style.cursor = 'pointer';
-      debugButton.addEventListener('click', window.debugCheckCart);
-      document.body.appendChild(debugButton);
+
+      
     });
   </script>
   <script src="js/stripe-checkout.js" type="text/javascript"></script>
@@ -755,55 +684,7 @@
       });
     });
   </script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const checkoutItemsList = document.getElementById('checkout-items-list');
-
-      function displayCheckoutItems() {
-        const cart = JSON.parse(localStorage.getItem('cart')) || [];
-
-        if (checkoutItemsList) {
-          if (cart.length === 0) {
-            checkoutItemsList.innerHTML = '<div class="empty-cart-message">No items in cart</div>';
-            return;
-          }
-
-          checkoutItemsList.innerHTML = cart.map(item => {
-            // Assume item.price is in dollars
-            const price = parseFloat(item.price) || 0;
-            const quantity = parseInt(item.quantity, 10) || 1;
-            // Format price - ASSUMING dollars, NO division by 100
-            const formattedPrice = price.toFixed(2); // Display price per item
-
-            return `
-            <div class="w-commerce-commercecheckoutorderitem">
-              <div class="checkout-item-content">
-                ${item.image ? `
-                  <div class="checkout-item-image-wrapper">
-                    <img src="${item.image}" alt="${item.name}" class="checkout-item-image">
-                  </div>
-                ` : ''}
-                <div class="checkout-item-details">
-                  <div class="checkout-item-info">
-                    <h4>${item.name || item.title}</h4>
-                    <p>Price: $${formattedPrice}</p> <!-- Display dollar price -->
-                    <p>Quantity: ${item.quantity || 1}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          `}).join('');
-        } else {
-          console.warn("Element with ID 'checkout-items-list' not found.");
-        }
-      }
-
-      displayCheckoutItems();
-
-      // Listen for cart updates
-      window.addEventListener('cartUpdated', displayCheckoutItems);
-    });
-  </script>
+  
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       // NOTE: These IDs might not exist if you removed the default Webflow summary
@@ -928,75 +809,329 @@
   </script>
   <script src="https://d3e54v103j8qbb.cloudfront.net/js/jquery-3.5.1.min.dc5e7f18c8.js?site=65e62b0c1a4d82b1ab328fa8" type="text/javascript" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
   <script src="js/webflow.js" type="text/javascript"></script>
-  <script src="js/env-config.js" type="text/javascript"></script>
-  <!-- Load Stripe library (if loading from CDN/locally) -->
-  <script src="https://js.stripe.com/v3/"></script>
-
-  <!-- THEN load the script that USES the config and Stripe -->
-  <script src="js/stripe-payments.js"></script>
-  
-  <!-- PRICE FORMAT DIAGNOSTIC -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Create diagnostic button
-      const diagButton = document.createElement('button');
-      diagButton.textContent = 'Check Price Format';
-      diagButton.style.position = 'fixed';
-      diagButton.style.bottom = '180px';
-      diagButton.style.right = '20px';
-      diagButton.style.padding = '10px';
-      diagButton.style.background = '#2196F3';
-      diagButton.style.color = 'white';
-      diagButton.style.border = 'none';
-      diagButton.style.borderRadius = '4px';
-      diagButton.style.zIndex = '9999';
-      
-      diagButton.addEventListener('click', function() {
-        const cart = JSON.parse(localStorage.getItem('cart')) || [];
-        
-        if (cart.length === 0) {
-          alert('Cart is empty. Please add items first.');
-          return;
-        }
-        
-        // Check the first item's price format
-        const firstItem = cart[0];
-        const price = parseFloat(firstItem.price) || 0;
-        
-        let message = `First item: ${firstItem.name || firstItem.title || 'Unknown'}\n`;
-        message += `Raw price value: ${firstItem.price} (${typeof firstItem.price})\n`;
-        message += `Parsed price: ${price}\n\n`;
-        
-        // Determine likely format
-        const inCents = price / 100;
-        const inDollars = price;
-        
-        message += `If price is in cents: $${inCents.toFixed(2)}\n`;
-        message += `If price is in dollars: $${inDollars.toFixed(2)}\n\n`;
-        
-        // Make educated guess
-        if (price > 0 && price < 10) {
-          message += 'Price format appears to be in DOLLARS (no conversion needed)';
-        } else if (price >= 100) {
-          message += 'Price format appears to be in CENTS (needs to be divided by 100)';
-        } else {
-          message += 'Price format is unclear. Please check manually.';
-        }
-        
-        alert(message);
-      });
-      
-      document.body.appendChild(diagButton);
-    });
-  </script>
 
   <!-- Load Libraries and Config First -->
-  <script src="https://js.stripe.com/v3/"></script> <!-- Stripe.js -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> <!-- Supabase -->
-  <script src="js/env-config.js"></script> <!-- Your ENV Config -->
+  <script src="https://js.stripe.com/v3/"></script> <!-- Stripe.js - Load ONCE -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> <!-- Supabase - Load ONCE -->
+  <script src="js/env-config.js"></script> <!-- Your ENV Config - Load ONCE -->
 
-  <!-- Load Your Custom Scripts Last -->
-  <script src="js/stripe-payments.js"></script> <!-- Your Payment Logic -->
-  <script src="js/stripe-test.js"></script> <!-- Your Test Script -->
+  <!-- Load Your Custom Scripts That Depend on Libraries/Config -->
+  <!-- Ensure index.js runs if it sets up cart functionality needed by others -->
+  <script src="index.js" type="text/javascript"></script>
+  <!-- Load the script that initializes Stripe Elements and handles payment logic -->
+  <script src="js/stripe-payments.js"></script> <!-- Load ONCE -->
+  <!-- Load the script that populates the checkout page items (if separate) -->
+  <script src="js/stripe-checkout.js" type="text/javascript"></script> <!-- Load ONCE -->
+  <!-- Load any test/utility scripts last -->
+  <script src="js/stripe-test.js"></script> <!-- Load ONCE -->
+
+  <!-- Single Consolidated Inline Script for Page Initialization -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM fully loaded. Running consolidated initialization script.');
+
+      // --- Define Core Functions --- 
+      function calculateGrandTotal() {
+        let rawCartData = JSON.parse(localStorage.getItem('cart')) || [];
+        let cart = Array.isArray(rawCartData) ? rawCartData : [rawCartData];
+        cart = cart.filter(item => item && typeof item === 'object' && item.price !== undefined);
+        console.log('%ccalculateGrandTotal: Cart items found:', 'color: blue', cart.length);
+
+        let total = 0;
+        cart.forEach(item => {
+          const price = parseFloat(item.price) || 0; // Assuming price is in dollars based on previous logs
+          const quantity = parseInt(item.quantity, 10) || 1;
+          const itemTotal = price * quantity;
+          total += itemTotal;
+        });
+
+        const formattedTotal = total.toFixed(2);
+        console.log('%ccalculateGrandTotal: Grand total calculated:', 'color: blue', formattedTotal);
+
+        const grandTotalDisplay = document.getElementById('grand-total-display');
+        if (grandTotalDisplay) {
+          grandTotalDisplay.textContent = '$' + formattedTotal;
+          grandTotalDisplay.style.color = '#4CAF50';
+          grandTotalDisplay.style.fontWeight = 'bold';
+        } else {
+          console.error('%ccalculateGrandTotal: Grand total display element not found', 'color: red');
+        }
+
+        if (cart.length > 0 && total === 0) {
+            console.error('%ccalculateGrandTotal: WARNING: Cart has items but total is $0.00. Check item.price in localStorage.', 'color: orange');
+        }
+        
+        // Return the calculated total (useful for other functions)
+        return total;
+      }
+
+      function updateOrderSummary() {
+          const orderSummaryList = document.getElementById('order-summary-list'); // Webflow's default ID? Might not exist.
+          const subtotalElement = document.getElementById('subtotal-amount'); // Webflow's default ID?
+          const totalElement = document.getElementById('total-amount'); // Webflow's default ID?
+
+          const cart = JSON.parse(localStorage.getItem('cart')) || [];
+          const filteredCart = cart.filter(item => item && typeof item === 'object' && item.price !== undefined);
+
+          console.log('%cupdateOrderSummary: Updating summary section...', 'color: orange;');
+
+          // Calculate subtotal - ASSUMING prices are already in dollars
+          const subtotal = filteredCart.reduce((sum, item) => {
+            const price = parseFloat(item.price) || 0;
+            const quantity = parseInt(item.quantity) || 1;
+            return sum + (price * quantity);
+          }, 0);
+
+          console.log(`%cupdateOrderSummary: Calculated subtotal: ${subtotal.toFixed(2)}`, 'color: orange;');
+
+          if (orderSummaryList) {
+              if (filteredCart.length === 0) {
+                  orderSummaryList.innerHTML = '<div class="empty-cart-message">No items in cart</div>';
+              } else {
+                  orderSummaryList.innerHTML = filteredCart.map(item => {
+                      const price = parseFloat(item.price) || 0;
+                      const quantity = parseInt(item.quantity) || 1;
+                      const itemTotal = price * quantity;
+                      return `
+                          <div class="w-commerce-commercecheckoutsummarylineitem">
+                          <div class="text-block-3">
+                              ${item.name || item.title} ${quantity > 1 ? '× ' + quantity : ''}
+                          </div>
+                          <div class="text-block-6">
+                              $${itemTotal.toFixed(2)}
+                          </div>
+                          </div>
+                      `;
+                  }).join('');
+              }
+          } else {
+              console.warn('%cupdateOrderSummary: orderSummaryList element not found.', 'color: orange;');
+          }
+
+          // Update subtotal and total displays if they exist
+          if (subtotalElement) {
+              subtotalElement.textContent = `$${subtotal.toFixed(2)}`;
+              console.log(`%cupdateOrderSummary: Updated subtotal display to $${subtotal.toFixed(2)}`, 'color: orange;');
+          }
+           if (totalElement) {
+              totalElement.textContent = `$${subtotal.toFixed(2)}`; // Assuming total = subtotal for now
+              console.log(`%cupdateOrderSummary: Updated total display to $${subtotal.toFixed(2)}`, 'color: orange;');
+          }
+           
+          // ALSO update the main grand total display
+          const grandTotalDisplay = document.getElementById('grand-total-display');
+           if (grandTotalDisplay) {
+                grandTotalDisplay.textContent = `$${subtotal.toFixed(2)}`; // Use subtotal for consistency here
+           } else {
+                console.error('%cupdateOrderSummary: grand-total-display element not found!', 'color: red');
+           }
+      }
+      
+      function debugCheckCart() {
+          const cart = JSON.parse(localStorage.getItem('cart')) || [];
+          console.log('DEBUG - Cart contents:', cart);
+          console.log('DEBUG - Cart length:', cart.length);
+
+          if (cart.length > 0) {
+            alert('Cart has ' + cart.length + ' items. Check console for details.');
+            // Force re-render the checkout page or relevant parts
+            if (typeof initCheckoutPage === 'function') {
+              console.log('DEBUG: Re-initializing checkout page display...');
+              initCheckoutPage(); // Re-initialize item display
+            }
+            console.log('DEBUG: Recalculating totals...');
+            calculateGrandTotal(); // Recalculate total
+            updateOrderSummary(); // Recalculate summary section
+          } else {
+            alert('Cart is empty! Add some items first.');
+          }
+      }
+
+      // --- Expose Functions Globally (if needed) ---
+      window.calculateGrandTotal = calculateGrandTotal; // Expose grand total calculation
+      window.debugCheckCart = debugCheckCart; // Expose debug function
+
+      // --- Initialization Calls --- 
+      console.log('Running initialization calls...');
+      
+      // 1. Initialize Cart Display (from index.js or stripe-checkout.js)
+      if (typeof updateCartDisplay === 'function') {
+        console.log('Initializing cart display...');
+        updateCartDisplay();
+      } else {
+        console.warn('updateCartDisplay function not found.');
+      }
+
+      // 2. Initialize Checkout Page Items (from index.js or stripe-checkout.js)
+      if (typeof initCheckoutPage === 'function') {
+         // Use setTimeout if there are timing issues with external scripts
+         // setTimeout(function() {
+             console.log('Initializing checkout page content...');
+             initCheckoutPage();
+         // }, 100);
+      } else {
+        console.error('initCheckoutPage function not found.');
+      }
+
+      // 3. Calculate and Display Initial Totals
+      console.log('Performing initial total calculations...');
+      calculateGrandTotal(); 
+      updateOrderSummary();
+
+      // 4. Initialize Stripe Elements
+      console.log('Initializing Stripe...');
+      const stripePublishableKey = window.ENV && window.ENV.STRIPE ? window.ENV.STRIPE.PUBLISHABLE_KEY : null;
+      if (!stripePublishableKey) {
+          console.error('Stripe Publishable Key not found. Cannot initialize payment form.');
+      } else {
+          try {
+            const stripe = Stripe(stripePublishableKey);
+            if (!stripe) {
+              console.error('Stripe failed to initialize.');
+            } else {
+              const elements = stripe.elements();
+              
+              // Check if card elements exist before creating/mounting
+              if (document.getElementById('card-number-element') && 
+                  document.getElementById('card-expiry-element') && 
+                  document.getElementById('card-cvc-element')) {
+                    
+                  // Use separate elements if they exist
+                  const cardNumber = elements.create('cardNumber');
+                  cardNumber.mount('#card-number-element');
+                  
+                  const cardExpiry = elements.create('cardExpiry');
+                  cardExpiry.mount('#card-expiry-element');
+                  
+                  const cardCvc = elements.create('cardCvc');
+                  cardCvc.mount('#card-cvc-element');
+                  
+                  console.log('Mounted separate Stripe card elements.');
+                  
+              } else if (document.getElementById('card-element')) {
+                  // Fallback to single 'card' element if separate ones aren't found
+                  const cardElement = elements.create('card');
+                  cardElement.mount('#card-element');
+                  console.log('Mounted single Stripe card element.');
+              } else {
+                  console.error('Could not find Stripe element containers (#card-number-element or #card-element).');
+              }
+              
+              // Add Payment Form Submission Handler
+              const paymentForm = document.getElementById('payment-form');
+              if (paymentForm) {
+                  paymentForm.addEventListener('submit', async (event) => {
+                      event.preventDefault();
+                      console.log('Payment form submitted. Creating payment method...');
+                      // Logic to get the correct card element would be needed here
+                      // This example assumes 'cardElement' exists if the single mount was used
+                      // A more robust solution would store the mounted element reference
+                      const cardElementRef = elements.getElement('card') || elements.getElement('cardNumber'); // Example
+                      if (!cardElementRef) {
+                          console.error('Card element not found for submission.');
+                          // Display error to user
+                           const cardErrors = document.getElementById('card-errors');
+                           if(cardErrors) cardErrors.textContent = 'Payment fields not set up correctly.';
+                          return;
+                      }
+                      
+                      const { error, paymentMethod } = await stripe.createPaymentMethod({
+                          type: 'card',
+                          card: cardElementRef, // Use the reference to the mounted element
+                          billing_details: { // Pass billing details
+                             name: document.getElementById('billing-name')?.value,
+                             email: document.getElementById('billing-email')?.value,
+                             address: {
+                                 line1: document.getElementById('billing-address')?.value,
+                                 city: document.getElementById('billing-city')?.value,
+                                 state: document.getElementById('billing-state')?.value,
+                                 postal_code: document.getElementById('billing-zip')?.value,
+                                 country: document.getElementById('billing-country')?.value,
+                             }
+                          }
+                      });
+
+                      if (error) {
+                          console.error('Payment method creation failed:', error);
+                          const cardErrors = document.getElementById('card-errors');
+                          if(cardErrors) cardErrors.textContent = error.message;
+                      } else {
+                          console.log('Payment method created:', paymentMethod);
+                          const cardErrors = document.getElementById('card-errors');
+                           if(cardErrors) cardErrors.textContent = ''; // Clear previous errors
+                          // TODO: Send paymentMethod.id to your server to complete payment
+                          alert('Payment Method Created (See Console) - Backend integration needed.');
+                          // Example: handleServerResponse(await fetch('/charge', { method: 'POST', body: JSON.stringify({ paymentMethodId: paymentMethod.id }) }));
+                      }
+                  });
+              } else {
+                console.error('Payment form #payment-form not found.');
+              }
+              
+            }
+          } catch (err) {
+              console.error('Error initializing Stripe:', err);
+          }
+      }
+
+      // --- Add Event Listeners --- 
+      console.log('Adding event listeners...');
+      
+      // 1. Cart Update Listener
+      window.addEventListener('cartUpdated', () => {
+          console.log('Event: cartUpdated detected. Recalculating totals...');
+          calculateGrandTotal();
+          updateOrderSummary();
+          // Optionally re-init checkout page if item structure changes
+          // if (typeof initCheckoutPage === 'function') { initCheckoutPage(); }
+      });
+
+      // 2. Billing Checkbox Listener
+      const billingCheckbox = document.getElementById('billing-same-as-shipping');
+      const billingAddressSection = document.querySelector('.w-commerce-commercecheckoutshippingaddresswrapper'); // Adjust selector if needed
+      if (billingCheckbox && billingAddressSection) {
+        console.log('Adding billing checkbox listener...');
+        // Initialize based on current state
+        billingAddressSection.style.display = billingCheckbox.checked ? 'none' : 'block'; 
+        // Add listener for changes
+        billingCheckbox.addEventListener('change', function() {
+          billingAddressSection.style.display = this.checked ? 'none' : 'block';
+        });
+      } else {
+          console.warn('Billing checkbox or address section not found.');
+      }
+
+      // 3. Discount Button Listener
+      const discountBtn = document.getElementById('apply-discount-btn');
+      if (discountBtn) {
+         console.log('Adding discount button listener...');
+        // Check if listener already exists to prevent duplicates
+        if (!discountBtn.hasAttribute('data-listener-added')) {
+          discountBtn.addEventListener('click', function() {
+            const discountInput = document.getElementById('wf-ecom-discounts');
+            if (discountInput && discountInput.value) {
+              alert('Discount code applied: ' + discountInput.value);
+              // TODO: Add actual discount logic here 
+              // Recalculate total after applying discount
+              calculateGrandTotal(); 
+              updateOrderSummary();
+            } else {
+              alert('Please enter a discount code');
+            }
+          });
+          discountBtn.setAttribute('data-listener-added', 'true');
+        }
+      } else {
+         console.warn('Discount button #apply-discount-btn not found.');
+      }
+
+      // --- Add Debug/Diagnostic Tools ---
+      console.log('Adding debug/diagnostic tools...');
+      
+      
+
+      console.log('Consolidated initialization script finished.');
+    });
+  </script>
 </body>
 </html>

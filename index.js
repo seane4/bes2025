@@ -1116,7 +1116,14 @@ function updateCartDisplay() {
         <div class="cart-item-total">Total: $${item.total}</div>
       `;
     }
-    
+
+    if (item.type === 'sponsorship') {
+      imageUrl = item.image;
+      itemPrice = parseFloat(item.price) / 100; // Convert cents to dollars
+      itemDetails = `
+        <div class="cart-item-info">${item.name}</div>
+      `;
+    }
     // Add to subtotal
     subtotal += itemPrice;
     
@@ -1126,8 +1133,8 @@ function updateCartDisplay() {
           <img src="${imageUrl}" alt="${item.type === 'activity' ? item.title : item.roomType}" class="cart-item-image">
         </div>
         <div class="cart-item-details">
-          <div class="cart-item-title">${item.type === 'activity' ? item.title : item.roomType}</div>
-          ${itemDetails}
+          <div class="cart-item-title">${item.type === 'activity' ? item.title : item.name}</div>
+          <div class="cart-item-price">$${item.price <= 25000 ? item.price : item.price / 100}</div>
           <button class="remove-item-btn" data-index="${index}">Remove</button>
         </div>
       </div>
@@ -1330,6 +1337,20 @@ function initCheckoutPage() {
             <button class="checkout-remove-btn" data-index="${index}" style="padding: 8px 12px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">Remove</button>
           </div>
         `;
+      } else if (item.type === 'sponsorship') {
+        itemContent = `
+          <div class="checkout-item-content" style="display: flex; align-items: flex-start; gap: 20px;">
+            <div class="checkout-item-image-wrapper" style="width: 100px; height: 100px; flex-shrink: 0;">
+              <img src="${item.image || 'images/sponsorship-placeholder.jpg'}" alt="${item.title}" class="checkout-item-image" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            <div class="checkout-item-details" style="flex: 1;">
+              <div class="checkout-item-info">
+                <h4 style="margin: 0 0 8px; font-size: 16px;">${item.name}</h4>
+                <p style="margin: 4px 0;">Price: $${item.price / 100}</p>
+              </div>
+            </div>
+          </div>
+        `;
       } else {
         // Room booking
         const roomImages = {
@@ -1359,7 +1380,7 @@ function initCheckoutPage() {
           </div>
         `;
       }
-
+      
       itemElement.innerHTML = itemContent;
       cartItemsList.appendChild(itemElement);
     });
