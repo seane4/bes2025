@@ -57,7 +57,9 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Initialize Stripe with your publishable key
-let stripe;
+// --- Make stripe instance globally accessible ---
+window.stripeInstance = null;
+// --- End change ---
 let elements;
 let cardElement;
 let cardNumberElement;
@@ -100,10 +102,12 @@ function initializeStripeElements() {
   
   try {
     // Initialize Stripe with the publishable key from window.ENV
-    stripe = Stripe(window.ENV.STRIPE.PUBLISHABLE_KEY);
+    // --- Assign to the global variable ---
+    window.stripeInstance = Stripe(window.ENV.STRIPE.PUBLISHABLE_KEY);
+    // --- End change ---
     
-    // Create Stripe elements
-    elements = stripe.elements({
+    // Create Stripe elements using the global instance
+    elements = window.stripeInstance.elements({
       fonts: [
         {
           cssSrc: 'https://fonts.googleapis.com/css?family=Sen:400,700,800',
@@ -162,8 +166,12 @@ function initializeStripeElements() {
     setTimeout(() => {
       mountStripeElements();
     }, 500);
+
+    console.log('Stripe elements initialized successfully.'); // Added log
   } catch (error) {
-    console.error('Error initializing Stripe:', error);
+    console.error('Error initializing Stripe elements:', error);
+    showError('Failed to initialize payment form. Please refresh the page.');
+    window.stripeInstance = null; // Ensure it's null if init fails
   }
 }
 
@@ -498,7 +506,7 @@ function setupCheckoutFormSubmission() {
 
       // 5. Confirm Card Payment with Stripe.js
       console.log('Confirming card payment...');
-      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
+      const { error: stripeError, paymentIntent } = await window.stripeInstance.confirmCardPayment(
         clientSecret,
         {
           payment_method: {

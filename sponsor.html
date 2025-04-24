@@ -418,11 +418,10 @@
               <li>Option to give personalized gifts to targeted attendees in their rooms (tracts to help coordinate)</li>
               <li>Chatbook Sponsor Recognition</li>
             </ul>
-            <button class="activity-add-btn btn"
+            <button class="activity-add-btn btn add-sponsor-to-cart-btn"
                     data-product-id="2573dc8b-f865-4988-8952-50958c4d368f"
                     data-product-name="Tier 1 Sponsorship"
-                    data-product-price="2500000"
-                    onclick="addToCartFromButton(this)">Add to Cart</button>
+                    data-product-price="2500000">Add to Cart</button>
           </div>
         </div>
 
@@ -442,11 +441,10 @@
               <li>5 event logo sponsorships</li>
               <li>Chatbook Sponsor Recognition</li>
             </ul>
-            <button class="activity-add-btn btn"
+            <button class="activity-add-btn btn add-sponsor-to-cart-btn"
                     data-product-id="0a9b9585-c16c-43ad-8c1a-dc291ca97d43"
                     data-product-name="Tier 2 Sponsorship"
-                    data-product-price="2000000"
-                    onclick="addToCartFromButton(this)">Add to Cart</button>
+                    data-product-price="2000000">Add to Cart</button>
           </div>
         </div>
 
@@ -466,11 +464,10 @@
               <li>3 event logo sponsorships</li>
               <li>Chatbook Sponsor recognition</li>
             </ul>
-            <button class="activity-add-btn btn"
+            <button class="activity-add-btn btn add-sponsor-to-cart-btn"
                     data-product-id="80388bae-f70a-4c80-841c-e380f50010e3"
                     data-product-name="Tier 3 Sponsorship"
-                    data-product-price="1500000"
-                    onclick="addToCartFromButton(this)">Add to Cart</button>
+                    data-product-price="1500000">Add to Cart</button>
           </div>
         </div>
 
@@ -489,11 +486,10 @@
               <li>3 event logo sponsorships</li>
               <li>Chatbook Sponsor Recognition</li>
             </ul>
-            <button class="activity-add-btn btn"
+            <button class="activity-add-btn btn add-sponsor-to-cart-btn"
                     data-product-id="d51bef8e-99eb-42de-87c1-aa24282d1ddd"
                     data-product-name="Tier 4 Sponsorship"
-                    data-product-price="1000000"
-                    onclick="addToCartFromButton(this)">Add to Cart</button>
+                    data-product-price="1000000">Add to Cart</button>
           </div>
         </div>
 
@@ -511,11 +507,10 @@
               <li>1 event logo sponsorship</li>
               <li>Chatbook Sponsor Recognition</li>
             </ul>
-            <button class="activity-add-btn btn"
+            <button class="activity-add-btn btn add-sponsor-to-cart-btn"
                     data-product-id="7e135487-b8bd-4fbd-900e-62fb9b39acf8"
                     data-product-name="Tier 5 Sponsorship"
-                    data-product-price="500000"
-                    onclick="addToCartFromButton(this)">Add to Cart</button>
+                    data-product-price="500000">Add to Cart</button>
           </div>
         </div>
 
@@ -719,17 +714,38 @@
     });
   </script>
   <script>
+    //AddToCartFromButton
     // Function to handle adding SPONSORSHIPS from buttons
     function addSponsorshipToCart(buttonElement) {
         // --- Get data from button attributes ---
         const productId = buttonElement.dataset.productId; // Expecting unique ID (UUID preferably)
         const productName = buttonElement.dataset.productName;
         const productPrice = parseInt(buttonElement.dataset.productPrice, 10); // Expecting price IN CENTS
-        const productImage = buttonElement.dataset.productImage || 'images/sponsor-placeholder.jpg'; // Get image or use default
+
+        // --- EDIT: Find image source dynamically from the card ---
+        let productImage = 'images/sponsor-placeholder.jpg'; // Default image
+        try {
+            // Navigate up to the card, then find the image within it
+            const activityCard = buttonElement.closest('.activity-card');
+            if (activityCard) {
+                const imgElement = activityCard.querySelector('.activity-image img');
+                if (imgElement && imgElement.src) {
+                    productImage = imgElement.src; // Get the actual src
+                } else {
+                    console.warn("Could not find img element or src within .activity-image for:", productName);
+                }
+            } else {
+                console.warn("Could not find parent .activity-card for button:", buttonElement);
+            }
+        } catch (error) {
+            console.error("Error finding product image:", error);
+        }
+        // --- END EDIT ---
 
         // --- Validate data ---
+        // Note: Image is not strictly required for adding to cart, so no validation needed here for it.
         if (!productId || !productName || isNaN(productPrice)) {
-            console.error("Button is missing required data attributes or price is invalid:", buttonElement);
+            console.error("Button is missing required data attributes (ID, Name) or price is invalid:", buttonElement);
             alert("Error: Could not add item. Missing product information.");
             return;
         }
@@ -741,7 +757,7 @@
             name: productName,
             price: productPrice, // Price IN CENTS
             quantity: 1,
-            image: productImage // Add image
+            image: productImage // Add the dynamically found (or default) image
             // No participantType or details needed
         };
 
@@ -751,6 +767,16 @@
 
         if (existingItemIndex > -1) {
             alert(`${newItem.name} is already in your cart.`);
+            // Optionally update UI feedback even if already in cart
+            const originalText = buttonElement.textContent;
+            if (originalText !== 'Added!') { // Avoid resetting if already showing 'Added!'
+                 buttonElement.textContent = 'Already Added!';
+                 buttonElement.disabled = true;
+                 setTimeout(() => {
+                     buttonElement.textContent = originalText;
+                     buttonElement.disabled = false;
+                 }, 2000);
+            }
             return; // Don't add again
         } else {
             cart.push(newItem);

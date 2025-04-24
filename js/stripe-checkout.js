@@ -1,41 +1,3 @@
-// Initialize Stripe with publishable key from environment config
-const stripe = Stripe(window.ENV.STRIPE.PUBLISHABLE_KEY);
-
-// Immediately calculate and display the grand total as soon as this script loads
-(function() {
-  // Get cart from localStorage
-  const cart = JSON.parse(localStorage.getItem('cart')) || [];
-  
-  // Calculate total
-  let total = 0;
-  cart.forEach(item => {
-    const price = parseFloat(item.price) || 0;
-    const quantity = parseInt(item.quantity, 10) || 1;
-    total += price * quantity;
-  });
-  
-  // Format total
-  const formattedTotal = total.toFixed(2);
-  
-  // Update display when DOM is available
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-      const grandTotalDisplay = document.getElementById('grand-total-display');
-      if (grandTotalDisplay) {
-        grandTotalDisplay.textContent = '$' + formattedTotal;
-        console.log('Grand total set to $' + formattedTotal + ' on DOMContentLoaded');
-      }
-    });
-  } else {
-    // DOM is already ready
-    const grandTotalDisplay = document.getElementById('grand-total-display');
-    if (grandTotalDisplay) {
-      grandTotalDisplay.textContent = '$' + formattedTotal;
-      console.log('Grand total set to $' + formattedTotal + ' immediately');
-    }
-  }
-})();
-
 // Create an instance of Elements
 const elements = stripe.elements();
 
@@ -673,33 +635,46 @@ async function redirectToCheckout() {
         throw new Error("Missing Session ID from server response.");
     }
 
-    // Redirect to Stripe Checkout
-    // IMPORTANT: Replace with your ACTUAL Stripe Publishable Key
-    const stripePublishableKey = 'pk_test_YOUR_PUBLISHABLE_KEY'; // REPLACE THIS
-    if (stripePublishableKey.includes('YOUR_PUBLISHABLE_KEY')) {
-        console.error("Stripe Publishable Key is not set!");
-        alert("Checkout configuration error. Please contact support.");
-        throw new Error("Stripe Publishable Key missing.");
+    // --- Ensure Stripe is initialized (it should be by stripe-payments.js) ---
+    if (!window.stripeInstance) {
+        console.error("Stripe instance not found. Initialization might have failed.");
+        alert("Payment system error. Please refresh and try again.");
+        // Hide loading indicator if shown
+        const payButton = document.getElementById('pay-button'); // Adjust ID if needed
+        if (payButton) {
+            payButton.disabled = false;
+            payButton.textContent = 'Proceed to Payment';
+        }
+        return; // Stop execution
     }
-    const stripe = Stripe(stripePublishableKey);
+    // --- End check ---
 
+
+    // --- Use the globally initialized Stripe instance ---
     console.log("Redirecting to Stripe Checkout...");
-    const { error } = await stripe.redirectToCheckout({ sessionId });
+    const { error } = await window.stripeInstance.redirectToCheckout({ sessionId });
+    // --- End change ---
 
-    // This point is only reached if redirectToCheckout fails immediately
     if (error) {
-      console.error("Stripe redirection error:", error);
-      throw new Error(`Could not redirect to Stripe: ${error.message}`); // Throw to be caught below
+      console.error("Stripe redirect error:", error);
+      // Display error message to the user
+      showError(error.message); // Assuming showError function exists
+      // Re-enable button, hide loading indicator
+      const payButton = document.getElementById('pay-button'); // Adjust ID if needed
+       if (payButton) {
+           payButton.disabled = false;
+           payButton.textContent = 'Proceed to Payment';
+       }
     }
   } catch (error) {
-    console.error("Checkout process error:", error);
-    alert(`Checkout failed: ${error.message}. Please try again or contact support.`);
-    // --- Restore button state on error ---
-    if (checkoutButton) {
-        checkoutButton.textContent = originalButtonText || 'Checkout';
-        checkoutButton.disabled = false;
-    }
-    // --- End restore button state ---
+    console.error("Error during checkout redirect:", error);
+    showError(error.message || "An unexpected error occurred during checkout.");
+    // Re-enable button, hide loading indicator
+    const payButton = document.getElementById('pay-button'); // Adjust ID if needed
+     if (payButton) {
+         payButton.disabled = false;
+         payButton.textContent = 'Proceed to Payment';
+     }
   }
 }
 
@@ -727,55 +702,75 @@ window.updateOrderSummary = function() {
   const subtotalElement = document.getElementById('subtotal-amount');
   const totalElement = document.getElementById('total-amount');
   const grandTotalDisplay = document.getElementById('grand-total-display');
-  
+
   // Get cart items directly from localStorage
   const cartItems = JSON.parse(localStorage.getItem('cart')) || [];
-  console.log('Cart items in updateOrderSummary:', cartItems);
-  
-  // Find this loop within your updateOrderSummary or total calculation function
-  const cartItemElements = document.querySelectorAll('.checkout-item'); // Adjust selector if needed
-  let calculatedTotal = 0;
+  console.log('cart before filtering', cartItems);
+  const filteredCart = cartItems.filter(item => item && typeof item === 'object' && item.price !== undefined); // Filter invalid items
 
-  console.log(`Found ${cartItemElements.length} item elements for total calculation.`); // Log how many items it found
+  console.log('%cupdateOrderSummary: Recalculating totals from localStorage...', 'color: blue; font-weight: bold;');
+  console.log('%cupdateOrderSummary: Filtered cart items:', 'color: blue;', filteredCart);
+
+  // --- Calculate Subtotal directly from filteredCart (localStorage data) ---
+  let subtotal = filteredCart.reduce((sum, item) => {
+    const price = parseFloat(item.price) || 0;
+    const quantity = parseInt(item.quantity, 10) || 1;
+    console.log(`%cupdateOrderSummary: Item: ${item.name || item.title}, Price: ${price}, Qty: ${quantity}, ItemTotal: ${price * quantity}`, 'color: blue;');
+    return sum + (price * quantity);
+  }, 0);
+
+  const formattedSubtotal = subtotal.toFixed(2);
+  console.log(`%cupdateOrderSummary: Calculated Subtotal: $${formattedSubtotal}`, 'color: blue; font-weight: bold;');
+
+  // --- Update DOM Elements ---
+  // Update subtotal display if element exists
+  if (subtotalElement) {
+    subtotalElement.textContent = `$${formattedSubtotal}`;
+  } else {
+    console.warn('updateOrderSummary: subtotal-amount element not found.');
+  }
+
+  // Update total display (assuming total = subtotal for now, adjust if tax/discounts apply here)
+  if (totalElement) {
+    totalElement.textContent = `$${formattedSubtotal}`;
+  } else {
+    console.warn('updateOrderSummary: total-amount element not found.');
+  }
+
+  // Update the main grand total display
+  if (grandTotalDisplay) {
+    grandTotalDisplay.textContent = `$${formattedSubtotal}`;
+    console.log(`%cupdateOrderSummary: Updated grand-total-display to $${formattedSubtotal}`, 'color: green; font-weight: bold;');
+  } else {
+    // IMPORTANT: Check if this element ID ('grand-total-display') is correct in your checkout.html
+    console.error('updateOrderSummary: grand-total-display element not found! Cannot update grand total.');
+  }
+
+
+  // --- REMOVE OR COMMENT OUT THE PROBLEMATIC DOM-READING LOOP ---
+  /*
+  console.log('%cupdateOrderSummary: Starting DOM element processing (REDUNDANT - Should be removed)...', 'color: orange;');
+  const cartItemElements = document.querySelectorAll('.checkout-item'); // Adjust selector if needed
+  let calculatedTotalFromDOM = 0; // Renamed to avoid confusion
+
+  console.log(`%cupdateOrderSummary: Found ${cartItemElements.length} checkout-item elements in DOM.`, 'color: orange;');
+
 
   cartItemElements.forEach((itemElement, index) => {
-      console.log(`Processing item element ${index + 1}:`, itemElement);
+      console.log(`%cupdateOrderSummary: Processing DOM item element ${index + 1}:`, 'color: orange;', itemElement);
 
       // --- DEBUGGING PRICE EXTRACTION ---
-      // Adjust the selector '.item-price' to match where the price is displayed for each item
-      const priceElement = itemElement.querySelector('.item-price-each'); // Use the correct class for price per item
+      const priceElement = itemElement.querySelector('.checkout-item-info p'); // <<< THIS SELECTOR IS PROBLEMATIC FOR BOOKINGS
 
       if (priceElement) {
-          console.log(`  Found price element for item ${index + 1}:`, priceElement);
-          const priceText = priceElement.textContent;
-          console.log(`  Raw price text content for item ${index + 1}: "${priceText}"`);
-
-          // Attempt to parse the price (adjust regex if needed based on format, e.g., remove $, commas)
-          // This example removes anything that isn't a digit or a decimal point.
-          const cleanedPriceText = priceText.replace(/[^0-9.]/g, '');
-          const price = parseFloat(cleanedPriceText);
-          console.log(`  Parsed price for item ${index + 1}: ${price}`); // Check if this is a valid number
-
-          if (!isNaN(price) && price > 0) {
-              // Now, get the quantity for this item (you might need to read this from the DOM too)
-              let quantity = 1; // Default to 1 if quantity isn't displayed/read
-              const quantityElement = itemElement.querySelector('.item-quantity'); // <<< ADJUST SELECTOR IF NEEDED
-              if (quantityElement) {
-                   // Clean the text content to remove non-digits before parsing
-                   const quantityText = quantityElement.textContent.replace(/[^0-9]/g, '');
-                   const quantityValue = parseInt(quantityText, 10);
-                   if (!isNaN(quantityValue) && quantityValue > 0) {
-                       quantity = quantityValue;
-                       console.log(`  Parsed quantity for item ${index + 1}: ${quantity}`); // Added log
-                   } else {
-                       console.warn(`  Failed to parse quantity for item ${index + 1}. Text: "${quantityElement.textContent}"`);
-                   }
-              } else {
-                   console.log(`  Quantity element not found for item ${index + 1}, assuming quantity is 1.`);
-              }
-          } else {
-              console.warn(`  Failed to parse price for item ${index + 1}. Text: "${priceText}"`);
-          }
+          // ... (rest of the faulty parsing logic) ...
+          // Example: calculatedTotalFromDOM += price * quantity;
       } else {
-                   console.log(`  Quantity element not found for item ${index + 1}, assuming quantity is 1.`) }
+          console.warn(`%cupdateOrderSummary: Price element (.checkout-item-info p) not found for DOM item ${index + 1}.`, 'color: red;');
       }
+  });
+  console.log(`%cupdateOrderSummary: Total calculated from DOM (REDUNDANT): $${calculatedTotalFromDOM.toFixed(2)}`, 'color: orange;');
+  */
+  // --- END OF REMOVED/COMMENTED SECTION ---
+
+}; // End of window.updateOrderSummary

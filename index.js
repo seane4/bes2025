@@ -1100,12 +1100,12 @@ function updateCartDisplay() {
     } else {
       // Accommodation item
       const roomImages = {
-        'Standard Room': 'images/Layer-6.jpg',
+        'Standard Room': 'images/deluxeimg-p-500.webp',
         'Deluxe Room': 'images/goatcreekimg-comp.jpg',
         'Junior Suite': 'images/hotelimg5.jpg',
         'Executive Suite': 'images/reduced-imgbes.jpg'
       };
-      imageUrl = roomImages[item.roomType] || 'images/Layer-6.jpg';
+      imageUrl = roomImages[item.roomType] || 'images/deluxeimg-p-500.webp';
       itemPrice = parseFloat(item.total);
       itemDetails = `
         <div class="cart-item-info">Check-in: ${item.checkInDate}</div>
@@ -1333,7 +1333,7 @@ function initCheckoutPage() {
       } else {
         // Room booking
         const roomImages = {
-          'Standard Room': 'images/Layer-6.jpg',
+          'Standard Room': 'images/deluxeimg-p-500.webp',
           'Deluxe Room': 'images/goatcreekimg-comp.jpg',
           'Junior Suite': 'images/hotelimg5.jpg',
           'Executive Suite': 'images/reduced-imgbes.jpg'
@@ -1342,7 +1342,7 @@ function initCheckoutPage() {
         itemContent = `
           <div class="checkout-item-content" style="display: flex; align-items: flex-start; gap: 20px;">
             <div class="checkout-item-image-wrapper" style="width: 100px; height: 100px; flex-shrink: 0;">
-              <img src="${roomImages[item.roomType] || 'images/Layer-6.jpg'}" alt="${item.roomType}" class="checkout-item-image" style="width: 100%; height: 100%; object-fit: cover;">
+              <img src="${roomImages[item.roomType] || 'images/deluxeimg-p-500.webp'}" alt="${item.roomType}" class="checkout-item-image" style="width: 100%; height: 100%; object-fit: cover;">
             </div>
             <div class="checkout-item-details" style="flex: 1;">
               <div class="checkout-item-info">
