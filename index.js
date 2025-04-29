@@ -1180,7 +1180,8 @@ function handleActivitySelection() {
     const variantSelect = card.querySelector('.variant-select');
     const guestSelect = card.querySelector('.guest-select');
     const title = card.querySelector('.activity-title').textContent;
-    const basePrice = parseFloat(card.getAttribute('data-price'));
+    let basePrice = parseFloat(card.getAttribute('data-price'));
+
     
     // Update variant description when variant changes
     if (variantSelect) {

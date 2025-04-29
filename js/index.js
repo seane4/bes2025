@@ -644,132 +644,65 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Initialize the booking form
 function initBookingForm() {
-  const checkInDateInput = document.getElementById('check-in-date');
-  const checkOutDateInput = document.getElementById('check-out-date');
-  const guestCountSelect = document.getElementById('guest-count');
-  const addToCartBtn = document.getElementById('add-to-cart-btn');
-  const summaryNights = document.getElementById('summary-nights');
-  const summaryTotal = document.getElementById('summary-total');
-  
-  if (!checkInDateInput || !checkOutDateInput) return;
-  
-  // Set default dates (if on register page)
-  const today = new Date();
-  const summitStartDate = new Date('2025-08-23');
-  const summitEndDate = new Date('2025-08-28');
-  
-  // Set min/max dates for the date inputs
-  checkInDateInput.min = formatDate(summitStartDate);
-  checkInDateInput.max = formatDate(new Date('2025-08-26')); // Allow check-in until 2 days before summit end
-  checkOutDateInput.min = formatDate(new Date('2025-08-24')); // At least 1 day stay
-  checkOutDateInput.max = formatDate(summitEndDate);
-  
-  // Update checkout min date when checkin changes
-  checkInDateInput.addEventListener('change', function() {
-    if (this.value) {
-      const nextDay = new Date(this.value);
-      nextDay.setDate(nextDay.getDate() + 1);
-      checkOutDateInput.min = formatDate(nextDay);
-      
-      // If checkout date is now invalid (before new min), update it
-      if (checkOutDateInput.value && new Date(checkOutDateInput.value) < nextDay) {
-        checkOutDateInput.value = formatDate(nextDay);
-      }
-      
-      updateBookingSummary();
-    }
-  });
-  
-  // Update booking summary when checkout date changes
-  checkOutDateInput.addEventListener('change', function() {
-    updateBookingSummary();
-  });
-  
-  // Update booking summary when guest count changes
-  guestCountSelect.addEventListener('change', function() {
-    updateBookingSummary();
-  });
-  
-  // Add to cart button functionality
-  if (addToCartBtn) {
-    addToCartBtn.addEventListener('click', function() {
-      const roomType = document.getElementById('summary-room-type').textContent;
-      const pricePerNight = document.getElementById('summary-price-per-night').textContent;
-      const nights = document.getElementById('summary-nights').textContent;
-      const total = document.getElementById('summary-total').textContent;
-      const checkInDate = checkInDateInput.value;
-      const checkOutDate = checkOutDateInput.value;
-      const guestCount = guestCountSelect.value;
-      
-      // Create a booking object
-      const booking = {
-        roomType,
-        pricePerNight,
-        nights,
-        total,
-        checkInDate,
-        checkOutDate,
-        guestCount
-      };
-      
-      // Store booking in local storage
-      let cart = JSON.parse(localStorage.getItem('cart')) || [];
-      cart.push(booking);
-      localStorage.setItem('cart', JSON.stringify(cart));
-      console.log('Raw total value:', total);
-      
-      // Calculate and store the total
-      let cartTotal = parseFloat(total.replace(/[^0-9.-]+/g, '')) || 0;
-      localStorage.setItem('cartTotal', cartTotal.toFixed(2));
-      console.log('cartTotal set to:', localStorage.getItem('cartTotal'));
-      
-      // Update cart display
-      updateCartDisplay();
-      
-      // Change button text and style
-      const originalText = this.textContent;
-      this.textContent = 'Added to Cart';
-      this.classList.add('added');
-      
-      // Disable the button temporarily
-      this.disabled = true;
-      
-      // Reset button after 3 seconds
-      setTimeout(() => {
-        this.textContent = originalText;
-        this.classList.remove('added');
-        this.disabled = false;
-      }, 3000);
-    });
-  }
-  
-  // Helper function to update booking summary
-  function updateBookingSummary() {
-    const checkInDate = new Date(checkInDateInput.value);
-    const checkOutDate = new Date(checkOutDateInput.value);
+  const form = document.getElementById('booking-form');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
     
-    if (checkInDateInput.value && checkOutDateInput.value) {
-      // Calculate number of nights
-      const timeDiff = checkOutDate - checkInDate;
-      const nights = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    const roomId = form.querySelector('[name="room_type"]').value;
+    const checkIn = form.querySelector('[name="check_in"]').value;
+    const checkOut = form.querySelector('[name="check_out"]').value;
+    const guests = parseInt(form.querySelector('[name="guests"]').value);
+
+    try {
+      // Fetch room data from Supabase
+      const { data: room, error } = await supabase
+        .from('accommodations')
+        .select('*')
+        .eq('id', roomId)
+        .single();
+
+      if (error) throw error;
+
+      // Calculate nights
+      const nights = Math.ceil(
+        (new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24)
+      );
+
+      // Create standardized cart item
+      const cartItem = createCartItem('accommodation', {
+        id: room.id,
+        roomType: room.room_type,
+        price_per_night_cents: room.price_per_night_cents,
+        checkInDate: checkIn,
+        checkOutDate: checkOut,
+        nights: nights,
+        guestCount: guests
+      });
+
+      // Add to cart
+      let cart = JSON.parse(localStorage.getItem('cart')) || [];
       
-      // Update summary
-      summaryNights.textContent = nights;
-      
-      // Calculate total
-      const pricePerNight = parseInt(document.getElementById('summary-price-per-night').textContent);
-      const total = nights * pricePerNight;
-      summaryTotal.textContent = total;
-      
-      // Enable/disable add to cart button
-      addToCartBtn.disabled = nights <= 0;
-    } else {
-      // Reset summary if dates are not selected
-      summaryNights.textContent = '0';
-      summaryTotal.textContent = '0';
-      addToCartBtn.disabled = true;
+      // Check for existing accommodation
+      const existingIndex = cart.findIndex(item => item.type === 'accommodation');
+      if (existingIndex >= 0) {
+        cart[existingIndex] = cartItem;
+      } else {
+        cart.push(cartItem);
+      }
+
+      localStorage.setItem('cart', JSON.stringify(cart));
+      updateCartDisplay();
+
+      // Show success message
+      showMessage('Room added to cart!', 'success');
+
+    } catch (error) {
+      console.error('Error adding room to cart:', error);
+      showMessage('Error adding room to cart', 'error');
     }
-  }
+  });
 }
 
 // Enhance date pickers to be more intuitive
@@ -1080,150 +1013,229 @@ function updateTotalPrice() {
   }
 }
 
-// Function to update cart display
-function updateCartDisplay() {
-  const cartItemsContainer = document.querySelector('.w-commerce-commercecartlist');
-  const cartEmptyState = document.querySelector('.w-commerce-commercecartemptystate');
-  const cartForm = document.querySelector('.w-commerce-commercecartformwrapper form');
-  const cartQuantityElements = document.querySelectorAll('.w-commerce-commercecartopenlinkcount');
-  const cartSubtotalValue = document.querySelector('.w-commerce-commercecartordervalue');
-  
-  // Get cart data from localStorage
-  let cart = JSON.parse(localStorage.getItem('cart')) || [];
-  
-  // Clear existing items
-  if (cartItemsContainer) {
-    cartItemsContainer.innerHTML = '';
-  }
-  
-  if (cart.length === 0) {
-    if (cartEmptyState) cartEmptyState.style.display = 'flex';
-    if (cartForm) cartForm.style.display = 'none';
-    if (cartQuantityElements) {
-      cartQuantityElements.forEach(el => el.textContent = '0');
-    }
-    if (cartSubtotalValue) {
-        cartSubtotalValue.textContent = '$0.00';
-    }
-    return;
-  }
-  
-  // Hide empty state and show form
-  if (cartEmptyState) cartEmptyState.style.display = 'none';
-  if (cartForm) cartForm.style.display = 'flex';
-  
-  // Update cart count
-  if (cartQuantityElements) {
-    cartQuantityElements.forEach(el => el.textContent = cart.length.toString());
-  }
-  
-  // Calculate subtotal
-  let subtotal = 0;
-  
-  // Display each item
-  cart.forEach((item, index) => {
-    const listItem = document.createElement('div');
-    listItem.className = 'w-commerce-commercecartitem cart-item';
-    
-    let imageUrl = item.image || 'images/placeholder.jpg'; // Default image
-    let itemDetails = '';
-    let itemPriceForSubtotal = 0;
-    let displayTitle = item.name || item.title || item.roomType || 'Unnamed Item';
-
-    if (item.type === 'sponsorship') {
-        const priceInDollars = (item.price / 100).toFixed(2);
-        itemPriceForSubtotal = parseFloat(priceInDollars);
-        itemDetails = `
-          <div class="cart-item-info">${item.name}</div>
-          <div class="cart-item-price">Total: $${priceInDollars}</div>
-        `;
-        imageUrl = item.image || 'images/sponsor-placeholder.jpg';
-        displayTitle = item.name;
-
-    } else if (item.type === 'activity') {
-        itemPriceForSubtotal = parseFloat(item.price) || 0;
-        itemDetails = `
-          <div class="cart-item-info">${item.title}</div>
-          <div class="cart-item-price">$${itemPriceForSubtotal.toFixed(2)}</div>
-        `;
-        imageUrl = item.image || 'images/activity-placeholder.jpg';
-        displayTitle = item.title;
-
-    } else if (item.type === 'room' || item.roomType) { // Check if type is 'room' OR if roomType exists
-        itemPriceForSubtotal = parseFloat(item.total) || 0;
-        const roomImages = {
-            'Standard Room': 'images/deluxeimg-p-800.webp',
-            'Deluxe Room': 'images/goatcreekimg-comp.jpg',
-            'Junior Suite': 'images/hotelimg5.jpg',
-            'Executive Suite': 'images/reduced-imgbes.jpg'
-        };
-        imageUrl = roomImages[item.roomType] || 'images/deluxeimg-p-800.webp';
-        displayTitle = item.roomType;
-        itemDetails = `
-          <div class="cart-item-info">Check-in: ${item.checkInDate || 'N/A'}</div>
-          <div class="cart-item-info">Check-out: ${item.checkOutDate || 'N/A'}</div>
-          <div class="cart-item-info">Guests: ${item.guestCount || 'N/A'}</div>
-          <div class="cart-item-info">Nights: ${item.nights || 'N/A'}</div>
-          <div class="cart-item-price">$${item.pricePerNight || 0} per night</div>
-          <div class="cart-item-total">Total: $${item.total || '0.00'}</div>
-        `;
-    } else {
-        // Handle truly unknown item types
-        console.warn('Unknown item type in cart:', item);
-        itemPriceForSubtotal = parseFloat(item.price || item.total || 0);
-        itemDetails = `<div class="cart-item-info">Unknown Item Type</div>`;
-        displayTitle = 'Unknown Item';
+// Standardize cart item structure for all types
+function createCartItem(type, data) {
+    // Validate required data
+    if (!data.id || !data[type === 'accommodation' ? 'price_per_night_cents' : 'price_cents']) {
+        throw new Error('Missing required product data');
     }
 
-    // Add to subtotal
-    subtotal += itemPriceForSubtotal;
-    
-    listItem.innerHTML = `
-      <div class="cart-item-content">
-        <div class="cart-item-image-wrapper">
-          <img src="${imageUrl}" alt="${displayTitle}" class="cart-item-image">
-        </div>
-        <div class="cart-item-details">
-          <div class="cart-item-title">${displayTitle}</div>
-          ${itemDetails}
-          <button class="remove-item-btn" data-index="${index}">Remove</button>
-        </div>
-      </div>
-    `;
-    
-    if (cartItemsContainer) {
-      cartItemsContainer.appendChild(listItem);
+    const baseItem = {
+        id: data.id,
+        type: type,
+        name: data.name || data.room_type,
+        quantity: 1,
+        metadata: {}
+    };
+
+    switch (type) {
+        case 'accommodation':
+            if (!data.checkInDate || !data.checkOutDate || !data.nights || !data.guestCount) {
+                throw new Error('Missing required accommodation booking data');
+            }
+            return {
+                ...baseItem,
+                unit_price_cents: data.price_per_night_cents,
+                total_cents: data.price_per_night_cents * data.nights,
+                metadata: {
+                    check_in_date: data.checkInDate,
+                    check_out_date: data.checkOutDate,
+                    nights: data.nights,
+                    guests: data.guestCount
+                }
+            };
+
+        case 'activity':
+            if (!data.participantType) {
+                throw new Error('Missing participant type for activity');
+            }
+            const quantity = data.participantType === 'Both' ? 2 : 1;
+            return {
+                ...baseItem,
+                quantity: quantity,
+                unit_price_cents: data.price_cents,
+                total_cents: data.price_cents * quantity,
+                metadata: {
+                    participant_type: data.participantType
+                }
+            };
+
+        case 'sponsorship':
+            return {
+                ...baseItem,
+                unit_price_cents: data.price_cents,
+                total_cents: data.price_cents,
+                metadata: {
+                    tier: data.tier
+                }
+            };
+
+        default:
+            throw new Error(`Unknown item type: ${type}`);
     }
-  });
-  
-  // Update subtotal display
-  if (cartSubtotalValue) {
-    cartSubtotalValue.textContent = `$${subtotal.toFixed(2)}`;
-  }
-  
-  // Add event listeners to remove buttons
-  const removeButtons = document.querySelectorAll('.remove-item-btn');
-  removeButtons.forEach(button => {
-    if (!button.hasAttribute('data-listener-added')) {
-        button.addEventListener('click', function() {
-            const index = parseInt(this.getAttribute('data-index'));
-            removeCartItem(index); // Assuming removeCartItem function exists
-        });
-        button.setAttribute('data-listener-added', 'true');
-    }
-  });
 }
 
-// Function to remove an item from the cart
-function removeCartItem(index) {
-  let cart = JSON.parse(localStorage.getItem('cart')) || [];
-  
-  if (index >= 0 && index < cart.length) {
-    // Remove the item
-    cart.splice(index, 1);
-    localStorage.setItem('cart', JSON.stringify(cart));
-    updateCartDisplay();
-  }
+// Update cart display function
+function updateCartDisplay() {
+    const cart = JSON.parse(localStorage.getItem('cart')) || [];
+    const cartItemsContainer = document.getElementById('cart-items-container');
+    const cartCountElements = document.querySelectorAll('.cart-quantity-cart');
+    const subtotalElement = document.querySelector('.w-commerce-commercecartordervalue');
+
+    let subtotalCents = 0;
+
+    if (cartItemsContainer) {
+        cartItemsContainer.innerHTML = '';
+
+        if (cart.length === 0) {
+            cartItemsContainer.innerHTML = '<div class="empty-cart-message">Your cart is empty</div>';
+        } else {
+            cart.forEach((item, index) => {
+                try {
+                    // Validate cart item
+                    validateCartItem(item);
+                    
+                    // Add to subtotal
+                    subtotalCents += item.total_cents;
+
+                    const listItem = document.createElement('div');
+                    listItem.className = 'w-commerce-commercecartitem cart-item';
+
+                    // Get display values
+                    const unitPriceDollars = formatPrice(item.unit_price_cents);
+                    const totalPriceDollars = formatPrice(item.total_cents);
+
+                    // Build item HTML based on type
+                    switch (item.type) {
+                        case 'accommodation':
+                            listItem.innerHTML = `
+                                <div class="cart-item-content">
+                                    <div class="cart-item-image-wrapper">
+                                        <img src="${getRoomImage(item.name)}" alt="${item.name}" class="cart-item-image">
+                                    </div>
+                                    <div class="cart-item-details">
+                                        <div class="cart-item-title">${item.name}</div>
+                                        <div class="booking-dates">
+                                            ${formatDate(item.metadata.check_in_date)} - ${formatDate(item.metadata.check_out_date)}
+                                        </div>
+                                        <div class="booking-details">
+                                            ${item.metadata.nights} night${item.metadata.nights > 1 ? 's' : ''} • 
+                                            ${item.metadata.guests} guest${item.metadata.guests > 1 ? 's' : ''}
+                                        </div>
+                                        <div class="price-breakdown">
+                                            <div class="per-night">$${unitPriceDollars} per night</div>
+                                            <div class="total-price">Total: $${totalPriceDollars}</div>
+                                        </div>
+                                        <button class="remove-item-btn" data-index="${index}" onclick="removeFromCart(${index})">Remove</button>
+                                    </div>
+                                </div>
+                            `;
+                            break;
+
+                        case 'activity':
+                            listItem.innerHTML = `
+                                <div class="cart-item-content">
+                                    <div class="cart-item-image-wrapper">
+                                        <img src="${getActivityImage(item.name)}" alt="${item.name}" class="cart-item-image">
+                                    </div>
+                                    <div class="cart-item-details">
+                                        <div class="cart-item-title">${item.name}</div>
+                                        <div class="participant-info">
+                                            For: ${item.metadata.participant_type}
+                                        </div>
+                                        <div class="price-details">
+                                            ${item.quantity > 1 ? 
+                                                `<div class="quantity">${item.quantity}x $${unitPriceDollars}</div>` : 
+                                                `<div class="unit-price">$${unitPriceDollars}</div>`
+                                            }
+                                            <div class="total-price">Total: $${totalPriceDollars}</div>
+                                        </div>
+                                        <button class="remove-item-btn" data-index="${index}" onclick="removeFromCart(${index})">Remove</button>
+                                    </div>
+                                </div>
+                            `;
+                            break;
+
+                        case 'sponsorship':
+                            listItem.innerHTML = `
+                                <div class="cart-item-content">
+                                    <div class="cart-item-details">
+                                        <div class="cart-item-title">${item.name}</div>
+                                        <div class="sponsorship-tier">
+                                            Tier ${item.metadata.tier}
+                                        </div>
+                                        <div class="price-details">
+                                            <div class="total-price">$${totalPriceDollars}</div>
+                                        </div>
+                                        <button class="remove-item-btn" data-index="${index}" onclick="removeFromCart(${index})">Remove</button>
+                                    </div>
+                                </div>
+                            `;
+                            break;
+                    }
+
+                    cartItemsContainer.appendChild(listItem);
+                } catch (error) {
+                    console.error('Invalid cart item:', error, item);
+                    // Optionally remove invalid item
+                    removeFromCart(index);
+                }
+            });
+        }
+    }
+
+    // Update cart count
+    cartCountElements.forEach(el => {
+        el.textContent = cart.length.toString();
+    });
+
+    // Update subtotal
+    if (subtotalElement) {
+        subtotalElement.textContent = formatPrice(subtotalCents);
+    }
+
+    // Dispatch event for other components
+    window.dispatchEvent(new CustomEvent('cartUpdated', { 
+        detail: { 
+            count: cart.length,
+            subtotalCents: subtotalCents 
+        }
+    }));
+}
+
+// Helper functions
+function formatPrice(cents) {
+    return (cents / 100).toFixed(2);
+}
+
+function formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    });
+}
+
+function getRoomImage(roomType) {
+    const roomImages = {
+        'Standard Room': 'images/deluxeimg-p-800.webp',
+        'Deluxe Room': 'images/goatcreekimg-comp.jpg',
+        'Junior Suite': 'images/hotelimg5.jpg',
+        'Executive Suite': 'images/reduced-imgbes.jpg'
+    };
+    return roomImages[roomType] || 'images/deluxeimg-p-800.webp';
+}
+
+function getActivityImage(activityName) {
+    const activityImages = {
+        'Signature Pool and Spa': 'images/pool-spa.jpg',
+        'Guided Mountain Hiking': 'images/hiking.jpg',
+        'BES2025 Golf Tournament': 'images/golf.jpg',
+        'Mountain Biking Adventure': 'images/biking.jpg',
+        'Horseback Riding': 'images/horseback.jpg',
+        'Evening Reception': 'images/reception.jpg'
+    };
+    return activityImages[activityName] || 'images/activity-default.jpg';
 }
 
 // Activity cart functionality
@@ -1765,4 +1777,248 @@ if (window.initCheckoutPage) {
       console.error('Checkout bridge - Main initCheckoutPage still not found after page load');
     }
   });
+}
+
+// Example structure - adapt to your actual function
+function addToCartFromButton(buttonElement) {
+    const card = buttonElement.closest('.activity-card');
+    if (!card) {
+        console.error("Could not find parent '.activity-card' for button:", buttonElement);
+        return;
+    }
+
+    const guestSelect = card.querySelector('.guest-select');
+    const participantValue = guestSelect ? guestSelect.value : 'single'; // 'single', 'spouse', 'both'
+
+    const productId = buttonElement.dataset.productId;
+    const productName = buttonElement.dataset.productName;
+    const productPriceCents = parseInt(buttonElement.dataset.productPrice, 10); // Price per person/selection IN CENTS
+    const productImage = card.querySelector('.activity-image img')?.src || 'images/activity-placeholder.jpg';
+
+    if (!productId || !productName || isNaN(productPriceCents)) {
+        console.error("Activity button missing data or invalid price:", buttonElement);
+        alert("Error adding activity. Missing information.");
+        return;
+    }
+
+    let quantity = 1;
+    let finalPriceCents = productPriceCents;
+    let participantType = 'Me'; // Default
+    let nameSuffix = ' (For Me)';
+
+    if (participantValue === 'spouse') {
+        participantType = 'Spouse';
+        nameSuffix = ' (For Spouse)';
+    } else if (participantValue === 'both') {
+        quantity = 2; // Assuming price is per person
+        finalPriceCents = productPriceCents * 2; // Double the price
+        participantType = 'Both';
+        nameSuffix = ' (For Both)';
+    }
+
+    const newItem = {
+        id: productId,
+        type: 'activity',
+        name: productName + nameSuffix, // Append participant info to name
+        quantity: quantity,
+        price: finalPriceCents, // Total price for this selection IN CENTS
+        image: productImage,
+        participantType: participantType // Store the type explicitly
+    };
+
+    let cart = JSON.parse(localStorage.getItem('cart')) || [];
+    // Prevent adding exact same activity/participant combo?
+    const existingItemIndex = cart.findIndex(item => item.id === newItem.id && item.participantType === newItem.participantType);
+
+    if (existingItemIndex > -1) {
+        alert(`${productName} (${participantType}) is already in your cart.`);
+        // Provide feedback without adding again
+        const originalText = buttonElement.textContent;
+         if (originalText !== 'Added!' && originalText !== 'Already Added!') {
+             buttonElement.textContent = 'Already Added!';
+             buttonElement.disabled = true;
+             setTimeout(() => {
+                 buttonElement.textContent = originalText;
+                 buttonElement.disabled = false;
+             }, 2000);
+         }
+        return;
+    } else {
+        cart.push(newItem);
+    }
+    localStorage.setItem('cart', JSON.stringify(cart));
+
+    // --- UI Updates ---
+    updateCartDisplay(); // Update mini-cart display
+    window.dispatchEvent(new Event('cartUpdated')); // Notify other scripts
+
+    // Add visual feedback
+    const originalText = buttonElement.textContent;
+    buttonElement.textContent = 'Added!';
+    buttonElement.disabled = true;
+    setTimeout(() => {
+        buttonElement.textContent = originalText;
+        buttonElement.disabled = false;
+    }, 2000);
+}
+
+function addActivityToCart(button) {
+    const activityId = button.dataset.activityId;
+    const participantType = button.closest('.activity-card')
+        .querySelector('.participant-select').value;
+
+    // Fetch activity data from Supabase
+    supabase
+        .from('activities')
+        .select('*')
+        .eq('id', activityId)
+        .single()
+        .then(({ data: activity, error }) => {
+            if (error) throw error;
+
+            const quantity = participantType === 'both' ? 2 : 1;
+            
+            const cartItem = createCartItem('activity', {
+                id: activity.id,
+                name: activity.name,
+                price_cents: activity.price_cents,
+                quantity: quantity,
+                participantType: participantType
+            });
+
+            let cart = JSON.parse(localStorage.getItem('cart')) || [];
+            
+            // Check for duplicate activity
+            const existingIndex = cart.findIndex(
+                item => item.id === activity.id && 
+                item.metadata.participant_type === participantType
+            );
+
+            if (existingIndex >= 0) {
+                showMessage('This activity is already in your cart', 'info');
+                return;
+            }
+
+            cart.push(cartItem);
+            localStorage.setItem('cart', JSON.stringify(cart));
+            updateCartDisplay();
+            showMessage('Activity added to cart!', 'success');
+        })
+        .catch(error => {
+            console.error('Error adding activity:', error);
+            showMessage('Error adding activity to cart', 'error');
+        });
+}
+
+// Add these utility functions
+const utils = {
+    formatPrice(cents) {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD'
+        }).format(cents / 100);
+    },
+
+    formatDate(dateString) {
+        return new Date(dateString).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+    },
+
+    calculateNights(checkIn, checkOut) {
+        return Math.ceil(
+            (new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24)
+        );
+    },
+
+    validateDates(checkIn, checkOut) {
+        const start = new Date(checkIn);
+        const end = new Date(checkOut);
+        const maxDays = parseInt(process.env.MAX_BOOKING_DAYS || '14');
+        
+        if (end <= start) return 'Check-out must be after check-in';
+        if ((end - start) / (1000 * 60 * 60 * 24) > maxDays) {
+            return `Maximum stay is ${maxDays} days`;
+        }
+        return null;
+    }
+};
+
+// Export utils if using modules
+if (typeof module !== 'undefined') {
+    module.exports = { utils };
+}
+
+// Add standardized metadata structure for order items
+const ORDER_ITEM_METADATA = {
+    accommodation: {
+        required: ['check_in_date', 'check_out_date', 'nights', 'guests'],
+        format: {
+            check_in_date: 'YYYY-MM-DD',
+            check_out_date: 'YYYY-MM-DD',
+            nights: 'number',
+            guests: 'number'
+        }
+    },
+    activity: {
+        required: ['participant_type'],
+        format: {
+            participant_type: ['Me', 'Spouse', 'Both']
+        }
+    },
+    sponsorship: {
+        required: ['tier'],
+        format: {
+            tier: ['1', '2', '3', '4', '5']
+        }
+    }
+};
+
+function validateCartItem(item) {
+    if (!item.type || !ORDER_ITEM_METADATA[item.type]) {
+        throw new Error(`Invalid item type: ${item.type}`);
+    }
+
+    const metadata = ORDER_ITEM_METADATA[item.type];
+    const missing = metadata.required.filter(field => !item.metadata[field]);
+    
+    if (missing.length > 0) {
+        throw new Error(`Missing required fields: ${missing.join(', ')}`);
+    }
+
+    return true;
+}
+
+const priceCalculators = {
+    accommodation: (item, pricePerNightCents) => {
+        return pricePerNightCents * item.metadata.nights;
+    },
+    activity: (item, priceCents) => {
+        return priceCents * (item.metadata.participant_type === 'Both' ? 2 : 1);
+    },
+    sponsorship: (item, priceCents) => priceCents
+};
+
+async function fetchProductPrice(type, id) {
+    const { data, error } = await supabase
+        .from(type === 'accommodation' ? 'accommodations' : 'activities')
+        .select(type === 'accommodation' ? 'price_per_night_cents' : 'price_cents')
+        .eq('id', id)
+        .single();
+
+    if (error) throw error;
+    return type === 'accommodation' ? data.price_per_night_cents : data.price_cents;
+}
+
+function prepareOrderItems(cart) {
+    return cart.map(item => ({
+        product_id: item.id,
+        product_type: item.type,
+        quantity: item.quantity,
+        unit_price_cents: item.unit_price_cents,
+        total_cents: item.total_cents,
+        metadata: item.metadata
+    }));
 }

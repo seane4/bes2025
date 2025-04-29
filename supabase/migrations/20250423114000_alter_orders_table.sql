@@ -1,24 +1,63 @@
 -- Migration file: supabase/migrations/YYYYMMDDHHMMSS_alter_orders_table.sql
 -- Purpose: Update the orders table structure for Stripe integration and normalization.
 
--- Add new columns required for Stripe integration and revised structure
-ALTER TABLE public.orders
-ADD COLUMN IF NOT EXISTS amount INTEGER, -- Total amount in cents
-ADD COLUMN IF NOT EXISTS currency VARCHAR(3), -- Currency code (e.g., 'usd')
-ADD COLUMN IF NOT EXISTS stripe_payment_intent_id VARCHAR(255); -- Link to Stripe Payment Intent
+-- Add columns if they don't exist
+DO $$ 
+BEGIN
+    -- Add amount column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name = 'orders' 
+        AND column_name = 'amount'
+    ) THEN
+        ALTER TABLE orders ADD COLUMN amount numeric(10,0);
+    END IF;
 
--- Add a unique constraint to stripe_payment_intent_id if desired (recommended)
--- Note: This might fail if you have duplicate NULLs and your Postgres version doesn't support NULLS NOT DISTINCT
--- Consider adding this constraint after ensuring initial data population or handling potential errors.
--- ALTER TABLE public.orders
--- ADD CONSTRAINT orders_stripe_payment_intent_id_unique UNIQUE NULLS NOT DISTINCT (stripe_payment_intent_id);
--- Simpler unique constraint (allows multiple NULLs):
-ALTER TABLE public.orders
-ADD CONSTRAINT orders_stripe_payment_intent_id_key UNIQUE (stripe_payment_intent_id);
+    -- Add currency column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name = 'orders' 
+        AND column_name = 'currency'
+    ) THEN
+        ALTER TABLE orders ADD COLUMN currency text DEFAULT 'usd';
+    END IF;
 
+    -- Add stripe_payment_intent_id column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name = 'orders' 
+        AND column_name = 'stripe_payment_intent_id'
+    ) THEN
+        ALTER TABLE orders ADD COLUMN stripe_payment_intent_id text;
+    END IF;
 
--- Add index for the new stripe_payment_intent_id column
-CREATE INDEX IF NOT EXISTS idx_orders_stripe_payment_intent_id ON public.orders (stripe_payment_intent_id);
+    -- Add unique constraint if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.table_constraints
+        WHERE constraint_name = 'orders_stripe_payment_intent_id_key'
+        AND table_name = 'orders'
+    ) THEN
+        ALTER TABLE orders
+        ADD CONSTRAINT orders_stripe_payment_intent_id_key UNIQUE (stripe_payment_intent_id);
+    END IF;
+END $$;
+
+-- Add any indexes if they don't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_indexes
+        WHERE tablename = 'orders'
+        AND indexname = 'idx_orders_stripe_payment_intent_id'
+    ) THEN
+        CREATE INDEX idx_orders_stripe_payment_intent_id ON orders(stripe_payment_intent_id);
+    END IF;
+END $$;
 
 -- Drop old/redundant columns
 -- Check if columns exist before dropping to make the script idempotent

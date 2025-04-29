@@ -306,3 +306,18 @@ s3_region = "env(S3_REGION)"
 s3_access_key = "env(S3_ACCESS_KEY)"
 # Configures AWS_SECRET_ACCESS_KEY for S3 bucket
 s3_secret_key = "env(S3_SECRET_KEY)"
+
+# Enable debugging
+debug = false
+
+# Disable signup by default
+disable_signup = true
+
+# Tables that should be exposed via the API
+[db.tables]
+activities = true
+accommodations = true
+orders = true
+order_items = true
+hotel_bookings = true
+customers = true

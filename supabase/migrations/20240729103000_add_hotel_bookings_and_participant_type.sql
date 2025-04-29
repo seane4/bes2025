@@ -62,3 +62,11 @@ CREATE TRIGGER on_order_items_updated_at
 BEFORE UPDATE ON public.order_items
 FOR EACH ROW
 EXECUTE FUNCTION public.handle_updated_at();
+
+-- New migration needed
+ALTER TABLE accommodations 
+RENAME COLUMN price_per_night TO price_per_night_cents;
+
+ALTER TABLE accommodations 
+ALTER COLUMN price_per_night_cents TYPE INTEGER 
+USING (price_per_night_cents * 100)::INTEGER;

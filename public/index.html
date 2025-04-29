@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banff Energy Summit - Checkout</title>
+    <link rel="stylesheet" href="/styles/checkout.css">
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+    <div class="checkout-container">
+        <h2>Checkout</h2>
+        
+        <!-- Order Summary -->
+        <div class="order-summary">
+            <h3>Order Summary</h3>
+            <div id="cart-items"></div>
+            <div id="cart-total"></div>
+        </div>
+
+        <!-- Checkout Form -->
+        <form id="payment-form">
+            <!-- Customer Information -->
+            <div class="customer-info">
+                <h3>Customer Information</h3>
+                
+                <!-- Primary Contact -->
+                <div class="form-group">
+                    <input type="email" id="email" placeholder="Email" required>
+                    <input type="text" id="primaryName" placeholder="Full Name" required>
+                    <input type="tel" id="phone" placeholder="Phone" required>
+                </div>
+
+                <!-- Address -->
+                <div class="form-group">
+                    <input type="text" id="address-line1" placeholder="Street Address" required>
+                    <input type="text" id="address-city" placeholder="City" required>
+                    <input type="text" id="address-state" placeholder="State" required>
+                    <input type="text" id="address-postal" placeholder="ZIP/Postal Code" required>
+                </div>
+
+                <!-- Additional Details -->
+                <div class="form-group">
+                    <select id="shirtSize" required>
+                        <option value="">Select Shirt Size</option>
+                        <option value="S">Small</option>
+                        <option value="M">Medium</option>
+                        <option value="L">Large</option>
+                        <option value="XL">X-Large</option>
+                        <option value="2XL">2X-Large</option>
+                    </select>
+                    <input type="text" id="primaryHeight" placeholder="Height">
+                    <input type="number" id="primaryWeight" placeholder="Weight">
+                </div>
+            </div>
+
+            <!-- Payment Element will be inserted here -->
+            <div id="payment-element"></div>
+
+            <button id="submit">
+                <div class="spinner hidden" id="spinner"></div>
+                <span id="button-text">Pay now</span>
+            </button>
+            <div id="payment-message" class="hidden"></div>
+        </form>
+    </div>
+
+    <script>
+        // Initialize Stripe
+        const stripe = Stripe('pk_test_51RDJNnCmQWfCgIYUttuWdIatviUpU6X0FCmX6nnIgHq0ExkwbrK1ZYb2QG2S9FlZVqYyUxuMaFy0yehnc62OsEnD00NBJr7cPP');
+        let elements;
+
+        // Mock cart data for testing
+        const cartItems = [
+            {
+                id: '1',
+                type: 'activity',
+                name: 'Conference Pass',
+                quantity: 1,
+                price_cents: 50000,
+                participantType: 'primary'
+            }
+        ];
+
+        // Display cart items
+        function displayCart() {
+            const cartItemsDiv = document.getElementById('cart-items');
+            const cartTotalDiv = document.getElementById('cart-total');
+            
+            cartItemsDiv.innerHTML = cartItems.map(item => `
+                <div class="cart-item">
+                    <span>${item.name}</span>
+                    <span>${item.quantity}x</span>
+                    <span>$${(item.price_cents / 100).toFixed(2)}</span>
+                </div>
+            `).join('');
+
+            const total = cartItems.reduce((sum, item) => sum + (item.price_cents * item.quantity), 0);
+            cartTotalDiv.innerHTML = `
+                <div class="cart-total">
+                    <strong>Total: </strong>
+                    <span>$${(total / 100).toFixed(2)}</span>
+                </div>
+            `;
+        }
+
+        // Initialize payment
+        async function initialize() {
+            const response = await fetch("/api/create-payment-intent", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    items: cartItems,
+                    customerData: {
+                        email: document.getElementById('email').value,
+                        primaryName: document.getElementById('primaryName').value,
+                        phone: document.getElementById('phone').value,
+                        address: {
+                            line1: document.getElementById('address-line1').value,
+                            city: document.getElementById('address-city').value,
+                            state: document.getElementById('address-state').value,
+                            postal_code: document.getElementById('address-postal').value,
+                            country: 'US'
+                        },
+                        shirtSize: document.getElementById('shirtSize').value,
+                        primaryHeight: document.getElementById('primaryHeight').value,
+                        primaryWeight: document.getElementById('primaryWeight').value
+                    }
+                }),
+            });
+
+            const { clientSecret } = await response.json();
+
+            elements = stripe.elements({ clientSecret });
+            const paymentElement = elements.create("payment");
+            paymentElement.mount("#payment-element");
+        }
+
+        // Handle form submission
+        async function handleSubmit(e) {
+            e.preventDefault();
+            setLoading(true);
+
+            const { error } = await stripe.confirmPayment({
+                elements,
+                confirmParams: {
+                    return_url: `${window.location.origin}/payment-confirmation`,
+                }
+            });
+
+            if (error) {
+                const messageDiv = document.getElementById("payment-message");
+                messageDiv.textContent = error.message;
+                messageDiv.classList.remove("hidden");
+            }
+
+            setLoading(false);
+        }
+
+        // Handle loading state
+        function setLoading(isLoading) {
+            const submitButton = document.querySelector("#submit");
+            const spinner = document.querySelector("#spinner");
+            const buttonText = document.querySelector("#button-text");
+
+            if (isLoading) {
+                submitButton.disabled = true;
+                spinner.classList.remove("hidden");
+                buttonText.classList.add("hidden");
+            } else {
+                submitButton.disabled = false;
+                spinner.classList.add("hidden");
+                buttonText.classList.remove("hidden");
+            }
+        }
+
+        // Initialize page
+        displayCart();
+        initialize();
+
+        // Add form submit handler
+        document.querySelector("#payment-form").addEventListener("submit", handleSubmit);
+    </script>
+</body>
+</html> 

@@ -757,11 +757,27 @@
         // --- UI Updates (remains the same) ---
         if (typeof updateCartDisplay === 'function') {
             updateCartDisplay();
-        } else { /* ... fallback ... */ }
-        // ... (visual feedback timeout remains the same) ...
+        }
+        // Add visual feedback
+        const originalText = buttonElement.textContent;
+        buttonElement.textContent = 'Added!';
+        buttonElement.disabled = true; // Optionally disable after adding
+        setTimeout(() => {
+            buttonElement.textContent = originalText;
+            buttonElement.disabled = false; // Re-enable if needed
+        }, 2000);
     }
 
-    // ... (DOMContentLoaded listener remains the same) ...
+    // Add event listeners to all sponsorship 'Add to Cart' buttons on this page
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.add-sponsor-to-cart-btn').forEach(button => { // Ensure buttons have this class
+            button.addEventListener('click', () => addSponsorshipToCart(button));
+        });
+         // Initial cart display update if the cart display element exists on this page
+         if (typeof updateCartDisplay === 'function' && document.getElementById('cart-items-container')) { // Check if cart display exists
+            updateCartDisplay();
+        }
+    });
   </script>
 </body>
 </html>
