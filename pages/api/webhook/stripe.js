@@ -393,20 +393,23 @@ async function handlePaymentSucceeded(paymentIntent) {
           continue; // Skip booking for this item
       }
 
-      const hotelBookingData = {
-        // IMPORTANT: Link using order_id as per current migration
-        [HOTEL_BOOKING_ORDER_ID_COLUMN]: supabaseOrderId,
-        // If schema changes to link via order_item_id, you'll need the inserted order_item's ID first.
-        // This would require inserting items individually or batch inserting then querying back.
-        // [HOTEL_BOOKING_ORDER_ITEM_ID_COLUMN]: /* Need the ID from the inserted order_item */,
-        [HOTEL_BOOKING_CHECK_IN_COLUMN]: item.checkIn, // Expecting 'YYYY-MM-DD' format
-        [HOTEL_BOOKING_CHECK_OUT_COLUMN]: item.checkOut, // Expecting 'YYYY-MM-DD' format
-        [HOTEL_BOOKING_GUESTS_COLUMN]: Number(item.guests) || 0,
-        [HOTEL_BOOKING_NIGHTS_COLUMN]: Number(item.nights) || 0,
-        [HOTEL_BOOKING_PRICE_PER_NIGHT_CENTS]: Number(item.price_per_night_cents) || 0,
-        [HOTEL_BOOKING_TOTAL_PRICE_CENTS]: Number(item.total_price_cents) || 0,
+      const bookingData = {
+        order_id: supabaseOrderId,
+        accommodation_id: item.id,
+        check_in_date: item.checkIn,
+        check_out_date: item.checkOut,
+        number_of_nights: item.nights,
+        number_of_guests: item.guests,
+        price_per_night_cents: item.price_per_night_cents,
+        total_price_cents: item.total_price_cents,
+        status: 'confirmed'
       };
-      hotelBookingsToInsert.push(hotelBookingData);
+
+      const { error: bookingError } = await supabase
+        .from('hotel_bookings')
+        .insert(bookingData);
+
+      if (bookingError) throw bookingError;
     }
   }
 

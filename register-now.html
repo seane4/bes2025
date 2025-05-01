@@ -333,58 +333,55 @@
           
           <!-- Booking Form -->
           <div class="booking-form-container">
-            <div class="booking-form">
-              <div class="booking-form-row">
-                <div class="date-input-group">
-                  <label class="date-label">Check-in Date</label>
-                  <div class="date-input-wrapper">
-                    <input type="date" class="date-input" id="check-in-date" min="2025-08-23" max="2025-08-26">
-                  </div>
-                </div>
-                
-                <div class="date-input-group">
-                  <label class="date-label">Check-out Date</label>
-                  <div class="date-input-wrapper">
-                    <input type="date" class="date-input" id="check-out-date" min="2025-08-24" max="2025-08-28">
-                  </div>
-                </div>
-                
-                <div class="guest-options">
-                  <label class="guest-label">Guests</label>
-                  <div class="guest-select-wrapper">
-                    <select class="guest-select" id="guest-count">
-                      <option value="1">1 Guest</option>
-                      <option value="2" selected>2 Guests</option>
-                      <option value="3">3 Guests</option>
-                      <option value="4">4 Guests</option>
+            <form id="booking-form" class="booking-form" onsubmit="return false;">
+                <div class="form-group">
+                    <label for="room-type">Room Type</label>
+                    <select id="room-type" name="room_type" required>
+                        <option value="standard" selected 
+                            data-product-id="room-banff-springs-suite-2025"
+                            data-product-name="Banff Springs Suite"
+                            data-product-price="80000">Banff Springs Suite</option>
                     </select>
-                    <div class="select-arrow">▼</div>
-                  </div>
+                    <div class="room-price">$800 per night</div>
                 </div>
-              </div>
-              
-              <!-- Booking Summary -->
-              <div class="booking-summary-floating">
-                <div class="summary-row">
-                  <div class="summary-label">Room Type:</div>
-                  <div class="summary-value" id="summary-room-type">Standard Room</div>
+
+                <div class="form-group">
+                    <label for="check-in">Check-in Date</label>
+                    <input type="date" id="check-in" name="check_in" required
+                           min="2025-08-23" max="2025-08-26">
                 </div>
-                <div class="summary-row">
-                  <div class="summary-label">Price per Night:</div>
-                  <div class="summary-value">$<span id="summary-price-per-night">800</span></div>
+
+                <div class="form-group">
+                    <label for="check-out">Check-out Date</label>
+                    <input type="date" id="check-out" name="check_out" required
+                           min="2025-08-24" max="2025-08-28">
                 </div>
-                <div class="summary-row">
-                  <div class="summary-label">Number of Nights:</div>
-                  <div class="summary-value"><span id="summary-nights">0</span></div>
+
+                <div class="form-group">
+                    <label for="guests">Number of Guests</label>
+                    <select id="guests" name="guests" required>
+                        <option value="1">1 Guest</option>
+                        <option value="2">2 Guests</option>
+                    </select>
                 </div>
-                <div class="summary-row total-row">
-                  <div class="summary-label">Total:</div>
-                  <div class="summary-value price-amount">$<span id="summary-total">0</span></div>
+
+                <div class="booking-summary">
+                    <div class="summary-row">
+                        <span>Nights:</span>
+                        <span id="nights-count">0</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Price per Night:</span>
+                        <span id="price-per-night">$800.00</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>Total:</span>
+                        <span id="total-price">$0.00</span>
+                    </div>
                 </div>
-                
-                <button class="booking-button" id="add-to-cart-btn" disabled>Add to Cart</button>
-              </div>
-            </div>
+
+                <button type="button" id="add-to-cart-btn" onclick="addRoomBookingToCart()">Add to Cart</button>
+            </form>
           </div>
         </div>
       </div>
@@ -768,13 +765,143 @@
         }, 2000);
     }
 
-    // Add event listeners to all sponsorship 'Add to Cart' buttons on this page
+    // Function to calculate number of nights between two dates
+    function calculateNights(checkIn, checkOut) {
+        const oneDay = 24 * 60 * 60 * 1000; // hours*minutes*seconds*milliseconds
+        const firstDate = new Date(checkIn);
+        const secondDate = new Date(checkOut);
+        
+        return Math.round(Math.abs((firstDate - secondDate) / oneDay));
+    }
+
+    // Function to format price as currency
+    function formatPrice(price) {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD'
+        }).format(price / 100);
+    }
+
+    // Function to update booking summary
+    function updateBookingSummary() {
+        const checkInDate = document.getElementById('check-in').value;
+        const checkOutDate = document.getElementById('check-out').value;
+        const pricePerNight = 80000; // in cents ($800.00)
+        
+        if (checkInDate && checkOutDate) {
+            const nights = calculateNights(checkInDate, checkOutDate);
+            const total = nights * pricePerNight;
+            
+            document.getElementById('nights-count').textContent = nights;
+            document.getElementById('price-per-night').textContent = formatPrice(pricePerNight);
+            document.getElementById('total-price').textContent = formatPrice(total);
+            
+            // Enable/disable add to cart button based on valid dates
+            document.getElementById('add-to-cart-btn').disabled = nights <= 0;
+        }
+    }
+
+    // Function to add room booking to cart
+    function addRoomBookingToCart() {
+        const form = document.getElementById('booking-form');
+        const roomSelect = document.getElementById('room-type');
+        const checkIn = document.getElementById('check-in').value;
+        const checkOut = document.getElementById('check-out').value;
+        const guests = document.getElementById('guests').value;
+        
+        if (!checkIn || !checkOut || !guests) {
+            alert('Please fill in all required fields');
+            return;
+        }
+
+        const nights = calculateNights(checkIn, checkOut);
+        if (nights <= 0) {
+            alert('Please select valid check-in and check-out dates');
+            return;
+        }
+
+        const selectedOption = roomSelect.options[roomSelect.selectedIndex];
+        const pricePerNight = parseInt(selectedOption.dataset.productPrice, 10);
+        const totalPrice = pricePerNight * nights;
+
+        // Create the cart item object
+        const roomBooking = {
+            id: selectedOption.dataset.productId,
+            type: 'accommodation',
+            name: selectedOption.dataset.productName,
+            price: totalPrice,
+            details: {
+                checkIn: checkIn,
+                checkOut: checkOut,
+                nights: nights,
+                pricePerNight: pricePerNight,
+                guests: parseInt(guests, 10)
+            },
+            quantity: 1
+        };
+
+        // Get existing cart
+        let cart = JSON.parse(localStorage.getItem('cart')) || [];
+        
+        // Check if this room is already booked for these dates
+        const existingBooking = cart.find(item => 
+            item.type === 'accommodation' && 
+            item.details?.checkIn === checkIn && 
+            item.details?.checkOut === checkOut
+        );
+
+        if (existingBooking) {
+            alert('You already have a room booking for these dates in your cart');
+            return;
+        }
+
+        // Add to cart
+        cart.push(roomBooking);
+        localStorage.setItem('cart', JSON.stringify(cart));
+
+        // Update UI
+        if (typeof updateCartDisplay === 'function') {
+            updateCartDisplay();
+        }
+
+        // Visual feedback
+        const addToCartBtn = document.getElementById('add-to-cart-btn');
+        const originalText = addToCartBtn.textContent;
+        addToCartBtn.textContent = 'Added to Cart!';
+        addToCartBtn.disabled = true;
+        
+        setTimeout(() => {
+            addToCartBtn.textContent = originalText;
+            addToCartBtn.disabled = false;
+        }, 2000);
+    }
+
+    // Add event listeners for date inputs
     document.addEventListener('DOMContentLoaded', () => {
-        document.querySelectorAll('.add-sponsor-to-cart-btn').forEach(button => { // Ensure buttons have this class
-            button.addEventListener('click', () => addSponsorshipToCart(button));
-        });
-         // Initial cart display update if the cart display element exists on this page
-         if (typeof updateCartDisplay === 'function' && document.getElementById('cart-items-container')) { // Check if cart display exists
+        const checkInInput = document.getElementById('check-in');
+        const checkOutInput = document.getElementById('check-out');
+        
+        if (checkInInput && checkOutInput) {
+            checkInInput.addEventListener('change', function() {
+                // Set minimum checkout date to day after checkin
+                if (this.value) {
+                    const minCheckout = new Date(this.value);
+                    minCheckout.setDate(minCheckout.getDate() + 1);
+                    checkOutInput.min = minCheckout.toISOString().split('T')[0];
+                    
+                    // If checkout date is now invalid, clear it
+                    if (checkOutInput.value && new Date(checkOutInput.value) <= new Date(this.value)) {
+                        checkOutInput.value = '';
+                    }
+                }
+                updateBookingSummary();
+            });
+            
+            checkOutInput.addEventListener('change', updateBookingSummary);
+        }
+
+        // Initial cart display update
+        if (typeof updateCartDisplay === 'function' && document.getElementById('cart-items-container')) {
             updateCartDisplay();
         }
     });

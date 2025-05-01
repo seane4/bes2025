@@ -1092,12 +1092,12 @@ function updateCartDisplay() {
     
     if (item.type === 'activity') {
       imageUrl = item.image;
-      itemPrice = parseFloat(item.price);
+      itemPrice = parseFloat(item.price) / 100;
       itemDetails = `
         <div class="cart-item-info">${item.title}</div>
-        <div class="cart-item-price">$${item.price}</div>
+        <div class="cart-item-price">$${itemPrice}</div>
       `;
-    } else {
+    } else if (item.type === 'accommodation') {
       // Accommodation item
       const roomImages = {
         'Standard Room': 'images/deluxeimg-p-500.webp',
@@ -1105,36 +1105,37 @@ function updateCartDisplay() {
         'Junior Suite': 'images/hotelimg5.jpg',
         'Executive Suite': 'images/reduced-imgbes.jpg'
       };
-      imageUrl = roomImages[item.roomType] || 'images/deluxeimg-p-500.webp';
-      itemPrice = parseFloat(item.total);
+      
+      // Access nested details object for accommodation
+      const details = item.details || {};
+      imageUrl = roomImages[item.name] || 'images/deluxeimg-p-500.webp';
+      itemPrice = parseFloat(item.price / 100); // Use the total price directly
+      
       itemDetails = `
-        <div class="cart-item-info">Check-in: ${item.checkInDate}</div>
-        <div class="cart-item-info">Check-out: ${item.checkOutDate}</div>
-        <div class="cart-item-info">Guests: ${item.guestCount}</div>
-        <div class="cart-item-info">Nights: ${item.nights}</div>
-        <div class="cart-item-price">$${item.pricePerNight} per night</div>
-        <div class="cart-item-total">Total: $${item.total}</div>
+        <div class="cart-item-info">Check-in: ${details.checkIn || 'N/A'}</div>
+        <div class="cart-item-info">Check-out: ${details.checkOut || 'N/A'}</div>
+        <div class="cart-item-info">Guests: ${details.guests || 1}</div>
+        <div class="cart-item-info"> $${itemPrice}</div>
       `;
-    }
-
-    if (item.type === 'sponsorship') {
+    } else if (item.type === 'sponsorship') {
       imageUrl = item.image;
       itemPrice = parseFloat(item.price) / 100; // Convert cents to dollars
       itemDetails = `
         <div class="cart-item-info">${item.name}</div>
       `;
     }
-    // Add to subtotal
-    subtotal += itemPrice;
+    
+    // Add to subtotal (ensure itemPrice is a valid number)
+    subtotal += isNaN(itemPrice) ? 0 : itemPrice;
     
     listItem.innerHTML = `
       <div class="cart-item-content">
         <div class="cart-item-image-wrapper">
-          <img src="${imageUrl}" alt="${item.type === 'activity' ? item.title : item.roomType}" class="cart-item-image">
+          <img src="${imageUrl}" alt="${item.name || 'Product'}" class="cart-item-image">
         </div>
         <div class="cart-item-details">
-          <div class="cart-item-title">${item.type === 'activity' ? item.title : item.name}</div>
-          <div class="cart-item-price">$${item.price <= 25000 ? item.price : item.price / 100}</div>
+          <div class="cart-item-title">${item.title || item.name}</div>
+          <div class="cart-item-price">${item.type === 'accommodation' ? itemDetails : '$' + itemPrice}</div>
           <button class="remove-item-btn" data-index="${index}">Remove</button>
         </div>
       </div>
@@ -1316,87 +1317,7 @@ function initCheckoutPage() {
       return;
     }
 
-    // Display each item in cart
-    cart.forEach((item, index) => {
-      const itemElement = document.createElement('div');
-      itemElement.className = 'w-commerce-commercecheckoutorderitem checkout-item';
-      itemElement.style.cssText = 'display: block !important; margin-bottom: 20px; padding: 15px; border: 1px solid #e6e6e6;';
 
-      let itemContent = '';
-      if (item.type === 'activity') {
-        itemContent = `
-          <div class="checkout-item-content" style="display: flex; align-items: flex-start; gap: 20px;">
-            <div class="checkout-item-image-wrapper" style="width: 100px; height: 100px; flex-shrink: 0;">
-              <img src="${item.image || 'images/activity-placeholder.jpg'}" alt="${item.title}" class="checkout-item-image" style="width: 100%; height: 100%; object-fit: cover;">
-            </div>
-            <div class="checkout-item-details" style="flex: 1;">
-              <div class="checkout-item-info">
-                <h4 style="margin: 0 0 8px; font-size: 16px;">${item.title}</h4>
-                <p style="margin: 4px 0;">Price: $${item.price}</p>
-              </div>
-            </div>
-            <button class="checkout-remove-btn" data-index="${index}" style="padding: 8px 12px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">Remove</button>
-          </div>
-        `;
-      } else if (item.type === 'sponsorship') {
-        itemContent = `
-          <div class="checkout-item-content" style="display: flex; align-items: flex-start; gap: 20px;">
-            <div class="checkout-item-image-wrapper" style="width: 100px; height: 100px; flex-shrink: 0;">
-              <img src="${item.image || 'images/sponsorship-placeholder.jpg'}" alt="${item.title}" class="checkout-item-image" style="width: 100%; height: 100%; object-fit: cover;">
-            </div>
-            <div class="checkout-item-details" style="flex: 1;">
-              <div class="checkout-item-info">
-                <h4 style="margin: 0 0 8px; font-size: 16px;">${item.name}</h4>
-                <p style="margin: 4px 0;">Price: $${item.price / 100}</p>
-              </div>
-            </div>
-          </div>
-        `;
-      } else {
-        // Room booking
-        const roomImages = {
-          'Standard Room': 'images/deluxeimg-p-500.webp',
-          'Deluxe Room': 'images/goatcreekimg-comp.jpg',
-          'Junior Suite': 'images/hotelimg5.jpg',
-          'Executive Suite': 'images/reduced-imgbes.jpg'
-        };
-        
-        itemContent = `
-          <div class="checkout-item-content" style="display: flex; align-items: flex-start; gap: 20px;">
-            <div class="checkout-item-image-wrapper" style="width: 100px; height: 100px; flex-shrink: 0;">
-              <img src="${roomImages[item.roomType] || 'images/deluxeimg-p-500.webp'}" alt="${item.roomType}" class="checkout-item-image" style="width: 100%; height: 100%; object-fit: cover;">
-            </div>
-            <div class="checkout-item-details" style="flex: 1;">
-              <div class="checkout-item-info">
-                <h4 style="margin: 0 0 8px; font-size: 16px;">${item.roomType}</h4>
-                <p style="margin: 4px 0;">Check-in: ${item.checkInDate}</p>
-                <p style="margin: 4px 0;">Check-out: ${item.checkOutDate}</p>
-                <p style="margin: 4px 0;">Guests: ${item.guestCount}</p>
-                <p style="margin: 4px 0;">Nights: ${item.nights}</p>
-                <p style="margin: 4px 0;">Price per night: $${item.pricePerNight}</p>
-                <p style="margin: 4px 0;">Total: $${item.total}</p>
-              </div>
-            </div>
-            <button class="checkout-remove-btn" data-index="${index}" style="padding: 8px 12px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">Remove</button>
-          </div>
-        `;
-      }
-      
-      itemElement.innerHTML = itemContent;
-      cartItemsList.appendChild(itemElement);
-    });
-
-    // Add event listeners to remove buttons
-    const removeButtons = document.querySelectorAll('.checkout-remove-btn');
-    removeButtons.forEach(button => {
-      button.addEventListener('click', function() {
-        const index = parseInt(this.getAttribute('data-index'));
-        removeCartItemFromCheckout(index);
-      });
-    });
-
-    // Update summary amounts
-    updateOrderSummary(cart);
 
   } catch (error) {
     console.error('Error in initCheckoutPage:', error);
@@ -1422,7 +1343,7 @@ function updateOrderSummary(cart) {
   });
 
   // Calculate tax and total
-  const taxRate = 0.05; // 5% tax rate
+  const taxRate = 0.00; // 0% tax rate
   const tax = subtotal * taxRate;
   const total = subtotal + tax;
 

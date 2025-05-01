@@ -588,6 +588,31 @@ document.addEventListener('DOMContentLoaded', function() {
     .empty-cart-message .btn:hover {
       background-color: #009a5f;
     }
+
+    /* Message system styles */
+    .message-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+    }
+
+    .message {
+      padding: 12px 24px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      color: white;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    .message-success { background-color: #4CAF50; }
+    .message-error { background-color: #f44336; }
+    .message-info { background-color: #2196F3; }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
   `;
   document.head.appendChild(styleSheet);
   
@@ -640,6 +665,209 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Update navigation - this should work on all pages
   updateNavigation();
+
+  // Add at the top of your file
+  const CART_VERSION = '1.0.0'; // Increment when cart structure changes
+
+  class CartManager {
+    static initialize() {
+      // Check if cart version has changed
+      const storedVersion = localStorage.getItem('cart_version');
+      if (storedVersion !== CART_VERSION) {
+        console.log(`Cart version changed from ${storedVersion} to ${CART_VERSION}. Clearing cart.`);
+        this.debugClearAll();
+        localStorage.setItem('cart_version', CART_VERSION);
+      }
+    }
+
+    static getCart() {
+      return JSON.parse(localStorage.getItem('cart')) || '[]';
+    }
+
+    static saveCart(cart) {
+      localStorage.setItem('cart', JSON.stringify(cart));
+      this.updateAllDisplays();
+    }
+
+    static addItem(item) {
+      try {
+        validateCartItem(item);
+        const cart = this.getCart();
+        
+        switch (item.type) {
+          case 'accommodation':
+            // Ensure required fields exist
+            if (!item.name || !item.unit_price_cents || !item.metadata) {
+              throw new Error('Invalid accommodation data');
+            }
+            // Replace existing accommodation
+            const existingAccomIndex = cart.findIndex(i => i.type === 'accommodation');
+            if (existingAccomIndex >= 0) {
+              cart[existingAccomIndex] = item;
+            } else {
+              cart.push(item);
+            }
+            break;
+          case 'activity':
+            // Check for same activity + participant type
+            const existingActivityIndex = cart.findIndex(i => 
+              i.id === item.id && 
+              i.metadata.participant_type === item.metadata.participant_type
+            );
+            if (existingActivityIndex >= 0) {
+              throw new Error('This activity is already in your cart');
+            }
+            cart.push(item);
+            break;
+
+          case 'sponsorship':
+            // Check for existing sponsorship
+            const hasSponsorshipTier = cart.some(i => 
+              i.type === 'sponsorship' && 
+              i.metadata.tier === item.metadata.tier
+            );
+            if (hasSponsorshipTier) {
+              throw new Error('This sponsorship tier is already in your cart');
+            }
+            cart.push(item);
+            break;
+        }
+
+        this.saveCart(cart);
+        return true;
+      } catch (error) {
+        console.error('Error adding to cart:', error);
+        return false;
+      }
+    }
+
+    static removeItem(index) {
+      const cart = this.getCart();
+      if (index >= 0 && index < cart.length) {
+        cart.splice(index, 1);
+        this.saveCart(cart);
+        return true;
+      }
+      return false;
+    }
+
+    static clearCart() {
+      localStorage.removeItem('cart');
+      this.updateAllDisplays();
+    }
+
+    static updateAllDisplays() {
+      // Update cart display
+      updateCartDisplay();
+      // Update checkout if on checkout page
+      if (typeof updateCheckoutSummary === 'function') {
+        updateCheckoutSummary();
+      }
+      // Dispatch event for other components
+      window.dispatchEvent(new CustomEvent('cartUpdated', {
+        detail: { cart: this.getCart() }
+      }));
+    }
+
+    static getSubtotalCents() {
+      return this.getCart().reduce((sum, item) => sum + item.total_cents, 0);
+    }
+
+    static getItemDisplay(item) {
+      const unitPrice = formatPrice(item.unit_price_cents);
+      const totalPrice = formatPrice(item.total_cents);
+
+      switch (item.type) {
+        case 'accommodation':
+          return `
+            <div class="cart-item-content">
+              <div class="cart-item-image-wrapper">
+                <img src="${getRoomImage(item.metadata.room_type)}" alt="${item.name}" class="cart-item-image">
+              </div>
+              <div class="cart-item-details">
+                <div class="cart-item-title">${item.name}</div>
+                <div class="booking-dates">
+                  ${formatDate(item.metadata.check_in_date)} - ${formatDate(item.metadata.check_out_date)}
+                </div>
+                <div class="booking-details">
+                  ${item.metadata.nights} night${item.metadata.nights > 1 ? 's' : ''} • 
+                  ${item.metadata.guests} guest${item.metadata.guests > 1 ? 's' : ''}
+                </div>
+                <div class="price-breakdown">
+                  <div class="per-night">$${unitPrice} per night</div>
+                  <div class="total-price">Total: $${totalPrice}</div>
+                </div>
+              </div>
+            </div>`;
+
+        case 'activity':
+          return `
+            <div class="cart-item-content">
+              <div class="cart-item-image-wrapper">
+                <img src="${getActivityImage(item.name)}" alt="${item.name}" class="cart-item-image">
+              </div>
+              <div class="cart-item-details">
+                <div class="cart-item-title">${item.name}</div>
+                <div class="participant-info">For: ${item.metadata.participant_type}</div>
+                <div class="price-details">
+                  ${item.quantity > 1 ? 
+                    `<div class="quantity">${item.quantity}x $${unitPrice}</div>` : 
+                    `<div class="unit-price">$${unitPrice}</div>`
+                  }
+                  <div class="total-price">Total: $${totalPrice}</div>
+                </div>
+              </div>
+            </div>`;
+      }
+    }
+
+    static debugClearAll() {
+      localStorage.clear();
+      sessionStorage.clear();
+      this.updateAllDisplays();
+      console.log('Cart and storage cleared');
+    }
+
+    // Add a debug method to inspect cart contents
+    static debugInspectCart() {
+      const cart = this.getCart();
+      console.log('Current Cart Contents:', cart);
+      cart.forEach((item, index) => {
+        console.log(`Item ${index}:`, {
+          type: item.type,
+          name: item.name,
+          price: item.unit_price_cents / 100,
+          total: item.total_cents / 100,
+          metadata: item.metadata
+        });
+
+      });
+    }
+
+    static validateCart() {
+      const cart = this.getCart();
+      const validCart = cart.filter(item => {
+        try {
+          validateCartItem(item);
+          return true;
+        } catch (error) {
+          console.warn('Removing invalid cart item:', error, item);
+          return false;
+        }
+      });
+
+      if (validCart.length !== cart.length) {
+        console.log('Cart was cleaned of invalid items');
+        this.saveCart(validCart);
+      }
+    }
+  }
+
+  // Initialize on page load
+  document.addEventListener('DOMContentLoaded', () => {
+    CartManager.initialize();
+    // ... rest of your initialization code
+  });
 });
 
 // Initialize the booking form
@@ -718,7 +946,7 @@ function enhanceDatePickers() {
     // The select button already has an onclick handler in the HTML
     // This is just additional functionality for the wrapper
     
-    // Make the wrapper clickable to open the date picker (excluding the button which has its own handler)
+    // Make the wrapper clickable to open the date picker (excluding the button which has its own handlers)
     wrapper.addEventListener('click', function(e) {
       // Don't trigger if clicking directly on the input or the button (they have their own handlers)
       if (e.target !== dateInput && !e.target.closest('.date-select-button')) {
@@ -1014,299 +1242,162 @@ function updateTotalPrice() {
 }
 
 // Standardize cart item structure for all types
+/* // Comment out this helper if CartManager handles item creation internally
 function createCartItem(type, data) {
     // Validate required data
-    if (!data.id || !data[type === 'accommodation' ? 'price_per_night_cents' : 'price_cents']) {
-        throw new Error('Missing required product data');
+    if (!data.id) {
+        throw new Error('Missing product ID');
     }
-
-    const baseItem = {
-        id: data.id,
-        type: type,
-        name: data.name || data.room_type,
-        quantity: 1,
-        metadata: {}
-    };
-
     switch (type) {
         case 'accommodation':
-            if (!data.checkInDate || !data.checkOutDate || !data.nights || !data.guestCount) {
-                throw new Error('Missing required accommodation booking data');
+            if (!data.price_per_night_cents || !data.checkInDate || !data.checkOutDate || !data.nights) {
+                console.error('Invalid accommodation data:', data);
+                throw new Error('Missing required accommodation data');
             }
             return {
-                ...baseItem,
+                id: data.id,
+                type: 'accommodation',
+                name: data.name || data.roomType, // Handle both name formats
                 unit_price_cents: data.price_per_night_cents,
                 total_cents: data.price_per_night_cents * data.nights,
+                quantity: 1, // Accommodation quantity is typically 1 booking
                 metadata: {
                     check_in_date: data.checkInDate,
                     check_out_date: data.checkOutDate,
                     nights: data.nights,
-                    guests: data.guestCount
+                    guests: data.guestCount || 1,
+                    room_type: data.name || data.roomType // Store room type in metadata
                 }
             };
-
         case 'activity':
-            if (!data.participantType) {
-                throw new Error('Missing participant type for activity');
-            }
-            const quantity = data.participantType === 'Both' ? 2 : 1;
+             if (!data.price_cents) {
+                 console.error('Invalid activity data:', data);
+                 throw new Error('Missing required activity data');
+             }
             return {
-                ...baseItem,
-                quantity: quantity,
+                id: data.id,
+                type: 'activity',
+                name: data.name,
                 unit_price_cents: data.price_cents,
-                total_cents: data.price_cents * quantity,
+                total_cents: data.price_cents * (data.quantity || 1), // Calculate total based on quantity
+                quantity: data.quantity || 1,
                 metadata: {
-                    participant_type: data.participantType
+                    participant_type: data.participantType || 'single'
                 }
             };
-
         case 'sponsorship':
+             if (!data.price_cents) {
+                 console.error('Invalid sponsorship data:', data);
+                 throw new Error('Missing required sponsorship data');
+             }
             return {
-                ...baseItem,
+                id: data.id,
+                type: 'sponsorship',
+                name: data.name,
                 unit_price_cents: data.price_cents,
-                total_cents: data.price_cents,
+                total_cents: data.price_cents, // Sponsorship quantity is typically 1
+                quantity: 1,
                 metadata: {
                     tier: data.tier
                 }
             };
-
         default:
+            console.error(`Unknown item type attempted: ${type}`);
             throw new Error(`Unknown item type: ${type}`);
     }
 }
-
-// Update cart display function
-function updateCartDisplay() {
-    const cart = JSON.parse(localStorage.getItem('cart')) || [];
-    const cartItemsContainer = document.getElementById('cart-items-container');
-    const cartCountElements = document.querySelectorAll('.cart-quantity-cart');
-    const subtotalElement = document.querySelector('.w-commerce-commercecartordervalue');
-
-    let subtotalCents = 0;
-
-    if (cartItemsContainer) {
-        cartItemsContainer.innerHTML = '';
-
-        if (cart.length === 0) {
-            cartItemsContainer.innerHTML = '<div class="empty-cart-message">Your cart is empty</div>';
-        } else {
-            cart.forEach((item, index) => {
-                try {
-                    // Validate cart item
-                    validateCartItem(item);
-                    
-                    // Add to subtotal
-                    subtotalCents += item.total_cents;
-
-                    const listItem = document.createElement('div');
-                    listItem.className = 'w-commerce-commercecartitem cart-item';
-
-                    // Get display values
-                    const unitPriceDollars = formatPrice(item.unit_price_cents);
-                    const totalPriceDollars = formatPrice(item.total_cents);
-
-                    // Build item HTML based on type
-                    switch (item.type) {
-                        case 'accommodation':
-                            listItem.innerHTML = `
-                                <div class="cart-item-content">
-                                    <div class="cart-item-image-wrapper">
-                                        <img src="${getRoomImage(item.name)}" alt="${item.name}" class="cart-item-image">
-                                    </div>
-                                    <div class="cart-item-details">
-                                        <div class="cart-item-title">${item.name}</div>
-                                        <div class="booking-dates">
-                                            ${formatDate(item.metadata.check_in_date)} - ${formatDate(item.metadata.check_out_date)}
-                                        </div>
-                                        <div class="booking-details">
-                                            ${item.metadata.nights} night${item.metadata.nights > 1 ? 's' : ''} • 
-                                            ${item.metadata.guests} guest${item.metadata.guests > 1 ? 's' : ''}
-                                        </div>
-                                        <div class="price-breakdown">
-                                            <div class="per-night">$${unitPriceDollars} per night</div>
-                                            <div class="total-price">Total: $${totalPriceDollars}</div>
-                                        </div>
-                                        <button class="remove-item-btn" data-index="${index}" onclick="removeFromCart(${index})">Remove</button>
-                                    </div>
-                                </div>
-                            `;
-                            break;
-
-                        case 'activity':
-                            listItem.innerHTML = `
-                                <div class="cart-item-content">
-                                    <div class="cart-item-image-wrapper">
-                                        <img src="${getActivityImage(item.name)}" alt="${item.name}" class="cart-item-image">
-                                    </div>
-                                    <div class="cart-item-details">
-                                        <div class="cart-item-title">${item.name}</div>
-                                        <div class="participant-info">
-                                            For: ${item.metadata.participant_type}
-                                        </div>
-                                        <div class="price-details">
-                                            ${item.quantity > 1 ? 
-                                                `<div class="quantity">${item.quantity}x $${unitPriceDollars}</div>` : 
-                                                `<div class="unit-price">$${unitPriceDollars}</div>`
-                                            }
-                                            <div class="total-price">Total: $${totalPriceDollars}</div>
-                                        </div>
-                                        <button class="remove-item-btn" data-index="${index}" onclick="removeFromCart(${index})">Remove</button>
-                                    </div>
-                                </div>
-                            `;
-                            break;
-
-                        case 'sponsorship':
-                            listItem.innerHTML = `
-                                <div class="cart-item-content">
-                                    <div class="cart-item-details">
-                                        <div class="cart-item-title">${item.name}</div>
-                                        <div class="sponsorship-tier">
-                                            Tier ${item.metadata.tier}
-                                        </div>
-                                        <div class="price-details">
-                                            <div class="total-price">$${totalPriceDollars}</div>
-                                        </div>
-                                        <button class="remove-item-btn" data-index="${index}" onclick="removeFromCart(${index})">Remove</button>
-                                    </div>
-                                </div>
-                            `;
-                            break;
-                    }
-
-                    cartItemsContainer.appendChild(listItem);
-                } catch (error) {
-                    console.error('Invalid cart item:', error, item);
-                    // Optionally remove invalid item
-                    removeFromCart(index);
-                }
-            });
-        }
-    }
-
-    // Update cart count
-    cartCountElements.forEach(el => {
-        el.textContent = cart.length.toString();
-    });
-
-    // Update subtotal
-    if (subtotalElement) {
-        subtotalElement.textContent = formatPrice(subtotalCents);
-    }
-
-    // Dispatch event for other components
-    window.dispatchEvent(new CustomEvent('cartUpdated', { 
-        detail: { 
-            count: cart.length,
-            subtotalCents: subtotalCents 
-        }
-    }));
-}
-
-// Helper functions
-function formatPrice(cents) {
-    return (cents / 100).toFixed(2);
-}
-
-function formatDate(dateString) {
-    return new Date(dateString).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-    });
-}
-
-function getRoomImage(roomType) {
-    const roomImages = {
-        'Standard Room': 'images/deluxeimg-p-800.webp',
-        'Deluxe Room': 'images/goatcreekimg-comp.jpg',
-        'Junior Suite': 'images/hotelimg5.jpg',
-        'Executive Suite': 'images/reduced-imgbes.jpg'
-    };
-    return roomImages[roomType] || 'images/deluxeimg-p-800.webp';
-}
-
-function getActivityImage(activityName) {
-    const activityImages = {
-        'Signature Pool and Spa': 'images/pool-spa.jpg',
-        'Guided Mountain Hiking': 'images/hiking.jpg',
-        'BES2025 Golf Tournament': 'images/golf.jpg',
-        'Mountain Biking Adventure': 'images/biking.jpg',
-        'Horseback Riding': 'images/horseback.jpg',
-        'Evening Reception': 'images/reception.jpg'
-    };
-    return activityImages[activityName] || 'images/activity-default.jpg';
-}
+*/
 
 // Activity cart functionality
+/* // Comment out this function as event listeners are added elsewhere (e.g., register-now.html)
 function handleActivitySelection() {
   const activityCards = document.querySelectorAll('.activity-card');
-  
+
   activityCards.forEach(card => {
     const addButton = card.querySelector('.activity-add-btn');
-    const variantSelect = card.querySelector('.variant-select');
     const guestSelect = card.querySelector('.guest-select');
-    const title = card.querySelector('.activity-title').textContent;
-    const basePrice = parseFloat(card.getAttribute('data-price'));
-    
-    // Update variant description when variant changes
-    if (variantSelect) {
-      variantSelect.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        const variantDescription = card.querySelector('.variant-description');
-        if (variantDescription && selectedOption.dataset.description) {
-          variantDescription.textContent = selectedOption.dataset.description;
+
+    if (addButton) {
+      addButton.addEventListener('click', () => {
+        const productId = addButton.dataset.productId;
+        const productName = addButton.dataset.productName;
+        const priceCents = parseInt(addButton.dataset.productPrice, 10);
+        const participantType = guestSelect ? guestSelect.value : 'single';
+        const quantity = (participantType === 'Both' || participantType === 'both') ? 2 : 1; // Handle case variations
+
+        // Use the potentially commented-out createCartItem or structure directly
+        const cartItem = { // Assuming direct structure if createCartItem is removed
+          id: productId,
+          type: 'activity',
+          name: productName,
+          unit_price_cents: priceCents,
+          total_cents: priceCents * quantity,
+          quantity: quantity,
+          metadata: { participant_type: participantType }
+        };
+        // createCartItem('activity', {
+        //   id: productId,
+        //   name: productName,
+        //   price_cents: priceCents,
+        //   participantType: participantType,
+        //   quantity: quantity
+        // });
+
+        // Attempt to use GlobalCartManager - this function shouldn't be doing this directly anymore
+        if (typeof GlobalCartManager !== 'undefined' && GlobalCartManager.addItem(cartItem)) {
+          showAddedFeedback(addButton); // Assuming showAddedFeedback is a general utility function
+        } else {
+            console.warn("Attempted to add activity via handleActivitySelection, but GlobalCartManager was not found or addItem failed.");
         }
       });
     }
-    
-    addButton.addEventListener('click', () => {
-      const selectedOption = guestSelect.value;
-      let finalPrice = basePrice;
-      let itemTitle = title;
-      
-      // Add variant to title if selected
-      if (variantSelect && variantSelect.value) {
-        const selectedVariant = variantSelect.options[variantSelect.selectedIndex].text;
-        itemTitle += ` - ${selectedVariant}`;
-      }
-      
-      if (selectedOption === 'both') {
-        finalPrice *= 2;
-        itemTitle += ' (For Both)';
-      } else if (selectedOption === 'spouse') {
-        itemTitle += ' (For Spouse)';
-      } else {
-        itemTitle += ' (For Me)';
-      }
-      
-      const cartItem = {
-        type: 'activity',
-        title: itemTitle,
-        price: finalPrice,
-        image: card.querySelector('.activity-image img').src,
-        variant: variantSelect ? variantSelect.value : null
-      };
-      
-      // Add to cart array
-      let cart = JSON.parse(localStorage.getItem('cart')) || [];
-      cart.push(cartItem);
-      localStorage.setItem('cart', JSON.stringify(cart));
-      
-      // Update cart display
-      updateCartDisplay();
-      
-      // Visual feedback
-      addButton.textContent = 'Added!';
-      addButton.classList.add('added');
-      
-      setTimeout(() => {
-        addButton.textContent = 'Add to Cart';
-        addButton.classList.remove('added');
-      }, 2000);
-    });
   });
 }
+*/
+
+// Cart display update
+/* // Comment out this function as CartManager.updateAllDisplays should handle UI updates
+function updateCartDisplay() {
+    // This function likely reads from localStorage and manipulates the DOM directly,
+    // conflicting with CartManager's responsibilities.
+    const cart = CartManager.getCart(); // Or maybe JSON.parse(localStorage.getItem('cart'))
+    const cartItemsContainer = document.getElementById('cart-items-container'); // Or Webflow selectors
+    if (!cartItemsContainer) return;
+
+    // Clear existing content
+    cartItemsContainer.innerHTML = '';
+
+    if (cart.length === 0) {
+        cartItemsContainer.innerHTML = '<div class="empty-cart-message">Your cart is empty</div>';
+        // updateCartCount(0); // Calls another potentially redundant function
+        // updateCartTotal(0); // Calls another potentially redundant function
+        // Update Webflow elements directly?
+        const cartQuantityElements = document.querySelectorAll('.w-commerce-commercecartopenlinkcount');
+        const cartSubtotalValue = document.querySelector('.w-commerce-commercecartordervalue');
+        if(cartQuantityElements) cartQuantityElements.forEach(el => el.textContent = '0');
+        if(cartSubtotalValue) cartSubtotalValue.textContent = '$0.00'; // Or use formatPrice
+
+        return;
+    }
+
+    // Add each item (using createCartItemElement or similar)
+    cart.forEach((item, index) => {
+        // const itemElement = createCartItemElement(item, index); // Assumes another helper function
+        // cartItemsContainer.appendChild(itemElement);
+    });
+
+    // Update counts and totals (using other helpers or direct DOM manipulation)
+    // updateCartCount(cart.length);
+    // updateCartTotal(CartManager.getSubtotalCents()); // Might call CartManager method, but structure is redundant
+     const cartQuantityElements = document.querySelectorAll('.w-commerce-commercecartopenlinkcount');
+     const cartSubtotalValue = document.querySelector('.w-commerce-commercecartordervalue');
+     const subtotalCents = cart.reduce((sum, item) => sum + (item.total_cents || item.price || 0), 0); // Example calculation, might be wrong structure
+
+     if(cartQuantityElements) cartQuantityElements.forEach(el => el.textContent = cart.length.toString()); // Update count
+     if(cartSubtotalValue) cartSubtotalValue.textContent = formatPrice(subtotalCents); // Update subtotal (assumes formatPrice exists)
+
+}
+*/
 
 // Initialize complete registration button
 function initCompleteRegistrationButton() {
@@ -1647,13 +1738,9 @@ function applyDiscount(code, discountPercentage) {
   
   if (orderSummaryList) {
     // Add the discount line if it doesn't exist
-    let discountLine = document.querySelector('.discount-line');
-    
-    if (!discountLine) {
-      discountLine = document.createElement('div');
-      discountLine.className = 'w-commerce-commercecheckoutsummarylineitem discount-line';
-      orderSummaryList.appendChild(discountLine);
-    }
+    let discountLine = document.createElement('div');
+    discountLine.className = 'w-commerce-commercecheckoutsummarylineitem discount-line';
+    orderSummaryList.appendChild(discountLine);
     
     discountLine.innerHTML = `
       <div class="text-block-4">Discount (${code})</div>
@@ -1779,246 +1866,124 @@ if (window.initCheckoutPage) {
   });
 }
 
-// Example structure - adapt to your actual function
-function addToCartFromButton(buttonElement) {
-    const card = buttonElement.closest('.activity-card');
-    if (!card) {
-        console.error("Could not find parent '.activity-card' for button:", buttonElement);
-        return;
+// Activity handling class
+class ActivityManager {
+    constructor() {
+        this.initializeActivities();
     }
 
-    const guestSelect = card.querySelector('.guest-select');
-    const participantValue = guestSelect ? guestSelect.value : 'single'; // 'single', 'spouse', 'both'
-
-    const productId = buttonElement.dataset.productId;
-    const productName = buttonElement.dataset.productName;
-    const productPriceCents = parseInt(buttonElement.dataset.productPrice, 10); // Price per person/selection IN CENTS
-    const productImage = card.querySelector('.activity-image img')?.src || 'images/activity-placeholder.jpg';
-
-    if (!productId || !productName || isNaN(productPriceCents)) {
-        console.error("Activity button missing data or invalid price:", buttonElement);
-        alert("Error adding activity. Missing information.");
-        return;
-    }
-
-    let quantity = 1;
-    let finalPriceCents = productPriceCents;
-    let participantType = 'Me'; // Default
-    let nameSuffix = ' (For Me)';
-
-    if (participantValue === 'spouse') {
-        participantType = 'Spouse';
-        nameSuffix = ' (For Spouse)';
-    } else if (participantValue === 'both') {
-        quantity = 2; // Assuming price is per person
-        finalPriceCents = productPriceCents * 2; // Double the price
-        participantType = 'Both';
-        nameSuffix = ' (For Both)';
-    }
-
-    const newItem = {
-        id: productId,
-        type: 'activity',
-        name: productName + nameSuffix, // Append participant info to name
-        quantity: quantity,
-        price: finalPriceCents, // Total price for this selection IN CENTS
-        image: productImage,
-        participantType: participantType // Store the type explicitly
-    };
-
-    let cart = JSON.parse(localStorage.getItem('cart')) || [];
-    // Prevent adding exact same activity/participant combo?
-    const existingItemIndex = cart.findIndex(item => item.id === newItem.id && item.participantType === newItem.participantType);
-
-    if (existingItemIndex > -1) {
-        alert(`${productName} (${participantType}) is already in your cart.`);
-        // Provide feedback without adding again
-        const originalText = buttonElement.textContent;
-         if (originalText !== 'Added!' && originalText !== 'Already Added!') {
-             buttonElement.textContent = 'Already Added!';
-             buttonElement.disabled = true;
-             setTimeout(() => {
-                 buttonElement.textContent = originalText;
-                 buttonElement.disabled = false;
-             }, 2000);
-         }
-        return;
-    } else {
-        cart.push(newItem);
-    }
-    localStorage.setItem('cart', JSON.stringify(cart));
-
-    // --- UI Updates ---
-    updateCartDisplay(); // Update mini-cart display
-    window.dispatchEvent(new Event('cartUpdated')); // Notify other scripts
-
-    // Add visual feedback
-    const originalText = buttonElement.textContent;
-    buttonElement.textContent = 'Added!';
-    buttonElement.disabled = true;
-    setTimeout(() => {
-        buttonElement.textContent = originalText;
-        buttonElement.disabled = false;
-    }, 2000);
-}
-
-function addActivityToCart(button) {
-    const activityId = button.dataset.activityId;
-    const participantType = button.closest('.activity-card')
-        .querySelector('.participant-select').value;
-
-    // Fetch activity data from Supabase
-    supabase
-        .from('activities')
-        .select('*')
-        .eq('id', activityId)
-        .single()
-        .then(({ data: activity, error }) => {
-            if (error) throw error;
-
-            const quantity = participantType === 'both' ? 2 : 1;
+    initializeActivities() {
+        const activityCards = document.querySelectorAll('.activity-card');
+        activityCards.forEach(card => {
+            const addButton = card.querySelector('.activity-add-btn');
+            const guestSelect = card.querySelector('.guest-select');
             
+            if (addButton) {
+                addButton.addEventListener('click', () => this.handleActivityAdd(card, addButton, guestSelect));
+            }
+        });
+    }
+
+    handleActivityAdd(card, button, guestSelect) {
+        try {
+            const productId = button.dataset.productId;
+            const productName = button.dataset.productName;
+            const priceCents = parseInt(button.dataset.productPrice, 10);
+            const participantType = this.getParticipantType(guestSelect?.value);
+
             const cartItem = createCartItem('activity', {
-                id: activity.id,
-                name: activity.name,
-                price_cents: activity.price_cents,
-                quantity: quantity,
-                participantType: participantType
+                id: productId,
+                name: productName,
+                price_cents: priceCents,
+                participantType: participantType,
+                quantity: participantType === 'Both' ? 2 : 1
             });
 
-            let cart = JSON.parse(localStorage.getItem('cart')) || [];
-            
-            // Check for duplicate activity
-            const existingIndex = cart.findIndex(
-                item => item.id === activity.id && 
-                item.metadata.participant_type === participantType
-            );
-
-            if (existingIndex >= 0) {
-                showMessage('This activity is already in your cart', 'info');
-                return;
+            if (CartManager.addItem(cartItem)) {
+                this.showAddedFeedback(button);
             }
-
-            cart.push(cartItem);
-            localStorage.setItem('cart', JSON.stringify(cart));
-            updateCartDisplay();
-            showMessage('Activity added to cart!', 'success');
-        })
-        .catch(error => {
+        } catch (error) {
             console.error('Error adding activity:', error);
-            showMessage('Error adding activity to cart', 'error');
-        });
+            showMessage(error.message, 'error');
+        }
+    }
+
+    getParticipantType(value) {
+        switch (value) {
+            case 'single': return 'Me';
+            case 'spouse': return 'Spouse';
+            case 'both': return 'Both';
+            default: return 'Me';
+        }
+    }
+
+    showAddedFeedback(button) {
+        const originalText = button.textContent;
+        button.textContent = 'Added!';
+        button.disabled = true;
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.disabled = false;
+        }, 2000);
+    }
 }
 
-// Add these utility functions
-const utils = {
-    formatPrice(cents) {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD'
-        }).format(cents / 100);
+// Page initialization
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize cart display
+    CartManager.updateAllDisplays();
+
+    // Initialize booking form if on register page
+    if (document.getElementById('booking-form')) {
+        new BookingForm();
+    }
+
+    // Initialize activities if they exist
+    if (document.querySelector('.activity-card')) {
+        new ActivityManager();
+    }
+
+    // Initialize checkout if on checkout page
+    if (document.getElementById('checkout-form')) {
+        initializeCheckout();
+    }
+});
+
+// Message system for user feedback
+const MessageSystem = {
+    show(message, type = 'info') {
+        const messageContainer = document.getElementById('message-container') || 
+            this.createMessageContainer();
+
+        const messageElement = document.createElement('div');
+        messageElement.className = `message message-${type}`;
+        messageElement.textContent = message;
+
+        messageContainer.appendChild(messageElement);
+        setTimeout(() => messageElement.remove(), 3000);
     },
 
-    formatDate(dateString) {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-        });
-    },
-
-    calculateNights(checkIn, checkOut) {
-        return Math.ceil(
-            (new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24)
-        );
-    },
-
-    validateDates(checkIn, checkOut) {
-        const start = new Date(checkIn);
-        const end = new Date(checkOut);
-        const maxDays = parseInt(process.env.MAX_BOOKING_DAYS || '14');
-        
-        if (end <= start) return 'Check-out must be after check-in';
-        if ((end - start) / (1000 * 60 * 60 * 24) > maxDays) {
-            return `Maximum stay is ${maxDays} days`;
-        }
-        return null;
+    createMessageContainer() {
+        const container = document.createElement('div');
+        container.id = 'message-container';
+        container.className = 'message-container';
+        document.body.appendChild(container);
+        return container;
     }
 };
 
-// Export utils if using modules
-if (typeof module !== 'undefined') {
-    module.exports = { utils };
-}
-
-// Add standardized metadata structure for order items
-const ORDER_ITEM_METADATA = {
-    accommodation: {
-        required: ['check_in_date', 'check_out_date', 'nights', 'guests'],
-        format: {
-            check_in_date: 'YYYY-MM-DD',
-            check_out_date: 'YYYY-MM-DD',
-            nights: 'number',
-            guests: 'number'
-        }
-    },
-    activity: {
-        required: ['participant_type'],
-        format: {
-            participant_type: ['Me', 'Spouse', 'Both']
-        }
-    },
-    sponsorship: {
-        required: ['tier'],
-        format: {
-            tier: ['1', '2', '3', '4', '5']
-        }
-    }
-};
-
-function validateCartItem(item) {
-    if (!item.type || !ORDER_ITEM_METADATA[item.type]) {
-        throw new Error(`Invalid item type: ${item.type}`);
-    }
-
-    const metadata = ORDER_ITEM_METADATA[item.type];
-    const missing = metadata.required.filter(field => !item.metadata[field]);
-    
-    if (missing.length > 0) {
-        throw new Error(`Missing required fields: ${missing.join(', ')}`);
-    }
-
-    return true;
-}
-
-const priceCalculators = {
-    accommodation: (item, pricePerNightCents) => {
-        return pricePerNightCents * item.metadata.nights;
-    },
-    activity: (item, priceCents) => {
-        return priceCents * (item.metadata.participant_type === 'Both' ? 2 : 1);
-    },
-    sponsorship: (item, priceCents) => priceCents
-};
-
-async function fetchProductPrice(type, id) {
-    const { data, error } = await supabase
-        .from(type === 'accommodation' ? 'accommodations' : 'activities')
-        .select(type === 'accommodation' ? 'price_per_night_cents' : 'price_cents')
-        .eq('id', id)
-        .single();
-
-    if (error) throw error;
-    return type === 'accommodation' ? data.price_per_night_cents : data.price_cents;
-}
-
-function prepareOrderItems(cart) {
-    return cart.map(item => ({
-        product_id: item.id,
-        product_type: item.type,
-        quantity: item.quantity,
-        unit_price_cents: item.unit_price_cents,
-        total_cents: item.total_cents,
-        metadata: item.metadata
-    }));
+// Add debug buttons during development
+if (process.env.NODE_ENV === 'development') {
+    document.addEventListener('DOMContentLoaded', () => {
+        const debugDiv = document.createElement('div');
+        debugDiv.style.position = 'fixed';
+        debugDiv.style.bottom = '10px';
+        debugDiv.style.right = '10px';
+        debugDiv.style.zIndex = '9999';
+        debugDiv.innerHTML = `
+            <button onclick="CartManager.debugClearAll()">Clear All</button>
+            <button onclick="CartManager.debugInspectCart()">Inspect Cart</button>
+        `;
+        document.body.appendChild(debugDiv);
+    });
 }

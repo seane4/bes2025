@@ -30,4 +30,29 @@ ALTER TABLE order_items
 
 -- Rename columns for clarity
 ALTER TABLE order_items RENAME COLUMN price TO unit_price_cents;
-ALTER TABLE order_items RENAME COLUMN total TO total_cents; 
+ALTER TABLE order_items RENAME COLUMN total TO total_cents;
+
+-- Rename columns for clarity (if not already done)
+DO $$ 
+BEGIN
+    -- Only rename if the old column names exist
+    IF EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name = 'order_items' 
+        AND column_name = 'price'
+    ) THEN
+        ALTER TABLE order_items 
+            RENAME COLUMN price TO unit_price_cents;
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name = 'order_items' 
+        AND column_name = 'total'
+    ) THEN
+        ALTER TABLE order_items 
+            RENAME COLUMN total TO total_cents;
+    END IF;
+END $$; 

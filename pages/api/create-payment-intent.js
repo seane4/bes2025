@@ -3,195 +3,211 @@ import { createClient } from '@supabase/supabase-js';
 
 // Initialize Stripe with API version
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2024-06-20',
+  apiVersion: '2024-06-20', // Use your desired version
 });
 
-// Initialize Supabase client
+// Initialize Supabase client (ensure URL and Service Key are correct)
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Use SERVICE ROLE KEY on server
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Table names and columns for price verification
+// --- Define Supabase table/column names (adjust if needed) ---
 const ACTIVITIES_TABLE = 'activities';
-const ACCOMMODATIONS_TABLE = 'accommodations';
+const ACCOMMODATIONS_TABLE = 'accommodations'; // Assuming you have this table
 const SPONSORSHIPS_TABLE = 'sponsorships';
+const PRICE_CENTS_COLUMN = 'price_cents'; // Standard price column for activities/sponsorships
+const ACCOM_PRICE_CENTS_COLUMN = 'price_per_night_cents'; // Price per night for accommodations
+const ACCOM_ID_COLUMN = 'id'; // PK for accommodations
+const ACCOM_NAME_COLUMN = 'name'; // e.g., 'Standard Room'
 
-export default async function handler(req, res) {
+export default async function handler(req, res) { // Adjust if using Express (req, res)
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   try {
     const { items, customerData } = req.body;
 
-    if (!items?.length || !customerData?.email) {
-      return res.status(400).json({ 
-        error: 'Missing required data', 
-        details: 'Both items array and customer email are required' 
-      });
+    // --- Basic Input Validation ---
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Cart items are required.' });
+    }
+    if (!customerData || typeof customerData !== 'object' || !customerData.email) {
+      // Add more checks for required customer fields if necessary
+      return res.status(400).json({ error: 'Valid customer data (including email) is required.' });
     }
 
-    // Will store validated items with server-verified prices
-    const validatedItemsForMetadata = [];
     let calculatedTotalCents = 0;
+    const validatedItemsForMetadata = []; // Store details needed by webhook
 
-    // Validate and calculate price for each item
+    // --- Server-side Price Validation Loop ---
     for (const item of items) {
-      if (!item.id || !item.type || !item.quantity) {
-        console.error('Invalid item in cart:', item);
-        return res.status(400).json({ 
-          error: 'Invalid item data', 
-          details: 'Each item must have id, type, and quantity' 
-        });
+      // Validate basic item structure received from client
+      if (!item.id || !item.type || !item.quantity || typeof item.quantity !== 'number' || item.quantity < 1) {
+          console.warn('Received invalid item structure from client:', item);
+          return res.status(400).json({ error: 'Invalid item data received.' });
       }
 
-      let verifiedItem;
-      
-      switch (item.type) {
-        case 'activity': {
-          const { data: activity, error } = await supabase
-            .from(ACTIVITIES_TABLE)
-            .select('id, title, price_cents, description')
-            .eq('id', item.id)
-            .single();
+      let unitPriceCents = 0;
+      let productName = item.name || 'Unknown Product'; // Use client name as fallback
+      let productId = item.id;
+      let productType = item.type;
+      let quantity = item.quantity; // Use client quantity
+      let dbData = null; // To store fetched DB record
 
-          if (error || !activity) {
-            console.error('Error fetching activity:', error);
-            return res.status(400).json({ 
-              error: 'Invalid activity', 
-              details: `Activity ${item.id} not found or error occurred` 
-            });
+      try {
+        switch (productType) {
+          case 'activity': {
+            const { data, error } = await supabase
+              .from(ACTIVITIES_TABLE)
+              .select(`id, title, ${PRICE_CENTS_COLUMN}`) // Select needed fields
+              .eq('id', productId)
+              .single(); // Expect exactly one match
+
+            if (error) throw new Error(`DB error fetching activity ${productId}: ${error.message}`);
+            if (!data) throw new Error(`Activity with ID ${productId} not found.`);
+
+            unitPriceCents = data[PRICE_CENTS_COLUMN];
+            productName = data.title || productName; // Prefer DB name
+            dbData = data;
+            break;
           }
 
-          const lineItemTotal = activity.price_cents * item.quantity;
-          calculatedTotalCents += lineItemTotal;
+          case 'accommodation': {
+            // Accommodation price depends on nights
+            if (typeof item.nights !== 'number' || item.nights < 1 || !item.checkInDate || !item.checkOutDate) {
+                throw new Error(`Invalid nights/dates for accommodation ${productId}.`);
+            }
+            const nights = item.nights;
 
-          validatedItemsForMetadata.push({
-            id: activity.id,
-            type: 'activity',
-            name: activity.title,
-            quantity: item.quantity,
-            price_cents: activity.price_cents,
-            total_price_cents: lineItemTotal,
-            participantType: item.participantType // Pass through from client
-          });
-          break;
+            const { data: room } = await supabase
+              .from(ACCOMMODATIONS_TABLE)
+              .select('price_per_night_cents, room_type')
+              .eq(ACCOM_ID_COLUMN, productId)
+              .single();
+
+            if (!room) throw new Error(`Room type not found: ${productId}`);
+
+            // Validate the price calculation
+            const expectedTotal = room.price_per_night_cents * nights;
+            if (item.price !== expectedTotal) {
+                throw new Error('Price mismatch for accommodation booking');
+            }
+
+            // Add booking metadata for webhook
+            item.metadata = {
+                room_type: room.room_type,
+                check_in: item.checkInDate,
+                check_out: item.checkOutDate,
+                nights: item.nights,
+                guests: item.guestCount,
+                price_per_night_cents: room.price_per_night_cents
+            };
+
+            unitPriceCents = room.price_per_night_cents * nights; // This is the total for the line item
+            productName = room[ACCOM_NAME_COLUMN] || productName; // Prefer DB name
+            quantity = 1; // Accommodation is always quantity 1
+            dbData = room; // Store fetched data
+            // Add price_per_night_cents to dbData for metadata if needed by webhook
+            dbData.price_per_night_cents = room.price_per_night_cents;
+            break;
+          }
+
+          case 'sponsorship': {
+            const { data, error } = await supabase
+              .from(SPONSORSHIPS_TABLE)
+              .select(`id, name, ${PRICE_CENTS_COLUMN}`)
+              .eq('id', productId)
+              .single();
+
+            if (error) throw new Error(`DB error fetching sponsorship ${productId}: ${error.message}`);
+            if (!data) throw new Error(`Sponsorship with ID ${productId} not found.`);
+
+            unitPriceCents = data[PRICE_CENTS_COLUMN];
+            productName = data.name || productName; // Prefer DB name
+            dbData = data;
+            break;
+          }
+
+          default:
+            throw new Error(`Unsupported item type: ${productType}`);
         }
 
-        case 'accommodation': {
-          const { data: accommodation, error } = await supabase
-            .from(ACCOMMODATIONS_TABLE)
-            .select('id, name, price_per_night_cents, description')
-            .eq('id', item.id)
-            .single();
-
-          if (error || !accommodation) {
-            console.error('Error fetching accommodation:', error);
-            return res.status(400).json({ 
-              error: 'Invalid accommodation', 
-              details: `Accommodation ${item.id} not found or error occurred` 
-            });
-          }
-
-          // Validate dates and calculate nights
-          const checkIn = new Date(item.checkIn);
-          const checkOut = new Date(item.checkOut);
-          
-          if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime())) {
-            return res.status(400).json({ 
-              error: 'Invalid dates', 
-              details: 'Check-in and check-out dates must be valid' 
-            });
-          }
-
-          const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
-          if (nights < 1) {
-            return res.status(400).json({ 
-              error: 'Invalid stay duration', 
-              details: 'Check-out must be after check-in' 
-            });
-          }
-
-          const lineItemTotal = accommodation.price_per_night_cents * nights;
-          calculatedTotalCents += lineItemTotal;
-
-          validatedItemsForMetadata.push({
-            id: accommodation.id,
-            type: 'accommodation',
-            name: accommodation.name,
-            quantity: 1,
-            price_per_night_cents: accommodation.price_per_night_cents,
-            total_price_cents: lineItemTotal,
-            checkIn: item.checkIn,
-            checkOut: item.checkOut,
-            nights,
-            guests: item.guests
-          });
-          break;
+        // --- Validate Fetched Price ---
+        if (typeof unitPriceCents !== 'number' || unitPriceCents < 0) {
+          throw new Error(`Invalid unit price (cents) found for ${productType} ${productId}.`);
         }
 
-        case 'sponsorship': {
-          const { data: sponsorship, error } = await supabase
-            .from(SPONSORSHIPS_TABLE)
-            .select('id, name, price_cents, description')
-            .eq('id', item.id)
-            .single();
+        // --- Calculate Line Item Total ---
+        const lineItemTotalCents = unitPriceCents * quantity; // For accommodation, unitPriceCents IS the total
+        calculatedTotalCents += lineItemTotalCents;
 
-          if (error || !sponsorship) {
-            console.error('Error fetching sponsorship:', error);
-            return res.status(400).json({ 
-              error: 'Invalid sponsorship', 
-              details: `Sponsorship ${item.id} not found or error occurred` 
-            });
-          }
+        // --- Prepare Item for Metadata (using validated/fetched data) ---
+        const validatedItem = {
+          id: productId,
+          type: productType,
+          name: productName, // Use name fetched/validated from DB
+          quantity: quantity,
+          // Store price components IN CENTS for the webhook
+          unit_price_cents: productType === 'accommodation' ? dbData.price_per_night_cents : unitPriceCents, // Store per-night for accom, unit for others
+          line_item_total_cents: lineItemTotalCents, // Store calculated line total
+          // Include other necessary details from original item for webhook
+          ...(productType === 'activity' && { participantType: item.participantType }),
+          ...(productType === 'accommodation' && {
+              checkIn: item.checkInDate,
+              checkOut: item.checkOutDate,
+              nights: item.nights,
+              guests: item.guestCount,
+              // price_per_night_cents is already included via unit_price_cents above
+          }),
+        };
+        validatedItemsForMetadata.push(validatedItem);
 
-          const lineItemTotal = sponsorship.price_cents * item.quantity;
-          calculatedTotalCents += lineItemTotal;
-
-          validatedItemsForMetadata.push({
-            id: sponsorship.id,
-            type: 'sponsorship',
-            name: sponsorship.name,
-            quantity: item.quantity,
-            price_cents: sponsorship.price_cents,
-            total_price_cents: lineItemTotal
-          });
-          break;
-        }
-
-        default:
-          return res.status(400).json({ 
-            error: 'Invalid item type', 
-            details: `Type ${item.type} is not supported` 
+      } catch (validationError) {
+          console.error(`Validation Error for item ${item.id}: ${validationError.message}`);
+          // Return a specific error indicating which item failed validation
+          return res.status(400).json({
+              error: `Item validation failed: ${validationError.message}`,
+              itemId: item.id
           });
       }
+    } // End validation loop
+
+    // --- Ensure Total is Valid ---
+    if (calculatedTotalCents <= 0 && validatedItemsForMetadata.length > 0) {
+        // Allow $0 total only if a valid discount makes it $0 (add discount logic if needed)
+        // Otherwise, it's an error if items exist but total is zero.
+        console.error('Calculated total is zero despite having items. Check prices in DB.');
+        return res.status(500).json({ error: 'Calculated total is zero. Please check item prices.' });
     }
 
-    // Create Stripe PaymentIntent with validated data
+
+    // --- Create Stripe Payment Intent ---
+    console.log(`Creating Payment Intent for amount: ${calculatedTotalCents} cents`);
     const paymentIntent = await stripe.paymentIntents.create({
       amount: calculatedTotalCents,
-      currency: 'usd', // Make configurable if needed
-      automatic_payment_methods: {
-        enabled: true,
-      },
+      currency: 'usd', // Or your desired currency (e.g., 'cad')
+      automatic_payment_methods: { enabled: true },
+      // --- Metadata for Webhook (use validated data) ---
       metadata: {
-        // Convert objects to strings for Stripe metadata
-        validatedItems: JSON.stringify(validatedItemsForMetadata),
-        customerData: JSON.stringify(customerData)
-      }
+        // Stringify validated items and customer data
+        // Ensure the total length of metadata doesn't exceed Stripe limits (50 keys, 500 chars per value)
+        validatedItems: JSON.stringify(validatedItemsForMetadata), // Send validated data
+        customerData: JSON.stringify(customerData), // Pass customer form data
+        // Add order ID from your system if generated pre-payment
+      },
     });
 
-    // Return the client_secret to the frontend
+    // --- Return client secret to frontend ---
     res.status(200).json({
-      clientSecret: paymentIntent.client_secret,
-      amount: calculatedTotalCents
+        clientSecret: paymentIntent.client_secret,
+        amount: calculatedTotalCents // Optionally return amount for confirmation
     });
 
   } catch (error) {
     console.error('Error creating payment intent:', error);
-    res.status(500).json({ 
-      error: 'Internal server error', 
-      details: error.message 
-    });
+    // Avoid sending detailed internal errors to the client in production
+    res.status(500).json({ error: `Internal Server Error. Please try again later.` });
   }
 } 

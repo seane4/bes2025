@@ -27,7 +27,7 @@ CREATE TABLE customers (
 -- Create orders table
 CREATE TABLE orders (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  custom                                                      er_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
   amount INTEGER,
   currency VARCHAR(3),
   stripe_payment_intent_id VARCHAR(255) UNIQUE,

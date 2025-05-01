@@ -721,7 +721,7 @@
 
         let total = 0;
         cart.forEach(item => {
-          const price = parseFloat(item.price) || 0; // Assuming price is in dollars based on previous logs
+          const price = parseFloat(item.price / 100) || 0; // Assuming price is in cents based on previous logs
           const quantity = parseInt(item.quantity, 10) || 1;
           const itemTotal = price * quantity;
           total += itemTotal;
@@ -757,9 +757,9 @@
 
           console.log('%cupdateOrderSummary: Updating summary section...', 'color: orange;');
 
-          // Calculate subtotal - ASSUMING prices are already in dollars
+          // Calculate subtotal - Converts price to dollars
           const subtotal = filteredCart.reduce((sum, item) => {
-            const price = parseFloat(item.price) || 0;
+            const price = parseFloat(item.price / 100) || 0;
             const quantity = parseInt(item.quantity) || 1;
             return sum + (price * quantity);
           }, 0);
@@ -1009,6 +1009,79 @@
 
       console.log('Consolidated initialization script finished.');
     });
+  </script>
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const cartItemsList = document.getElementById('checkout-items-list');
+    const cart = JSON.parse(localStorage.getItem('cart')) || [];
+    let subtotal = 0;
+
+    if (!cartItemsList) {
+        console.error('Cart items container not found');
+        return;
+    }
+
+    // Clear existing items
+    cartItemsList.innerHTML = '';
+
+    cart.forEach((item, index) => {
+        const itemElement = document.createElement('div');
+        itemElement.className = 'w-commerce-commercecheckoutorderitem checkout-item';
+        
+        let itemDetails = '';
+        let itemPrice = 0;
+        
+        switch(item.type) {
+            case 'accommodation':
+                itemPrice = parseFloat(item.price) / 100; // Convert cents to dollars
+                itemDetails = `
+                    <div class="checkout-item-details">
+                        <h4>${item.name}</h4>
+                        <p>Check-in: ${item.details?.checkIn || 'N/A'}</p>
+                        <p>Check-out: ${item.details?.checkOut || 'N/A'}</p>
+                        <p>Guests: ${item.details?.guests || 1}</p>
+                        <p>Total: $${itemPrice.toFixed(2)}</p>
+                    </div>`;
+                break;
+                
+            case 'activity':
+                itemPrice = parseFloat(item.price) / 100;
+                itemDetails = `
+                    <div class="checkout-item-details">
+                        <h4>${item.name}</h4>
+                        <p>Participants: ${item.quantity}</p>
+                        <p>Total: $${itemPrice.toFixed(2)}</p>
+                    </div>`;
+                break;
+                
+            case 'sponsorship':
+                itemPrice = parseFloat(item.price) / 100;
+                itemDetails = `
+                    <div class="checkout-item-details">
+                        <h4>${item.name}</h4>
+                        <p>Total: $${itemPrice.toFixed(2)}</p>
+                    </div>`;
+                break;
+        }
+
+        itemElement.innerHTML = `
+            <div class="checkout-item-content">
+                <div class="checkout-item-image-wrapper">
+                    <img src="${item.image || 'images/placeholder.jpg'}" alt="${item.name}" class="checkout-item-image">
+                </div>
+                ${itemDetails}
+            </div>`;
+            
+        cartItemsList.appendChild(itemElement);
+        subtotal += itemPrice;
+    });
+
+    // Update total display
+    const subtotalElement = document.querySelector('.w-commerce-commercecartordervalue');
+    if (subtotalElement) {
+        subtotalElement.textContent = `$${subtotal.toFixed(2)}`;
+    }
+  });
   </script>
 </body>
 </html>
