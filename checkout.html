@@ -1011,77 +1011,67 @@
     });
   </script>
   <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const cartItemsList = document.getElementById('checkout-items-list');
-    const cart = JSON.parse(localStorage.getItem('cart')) || [];
-    let subtotal = 0;
-
-    if (!cartItemsList) {
-        console.error('Cart items container not found');
-        return;
-    }
-
-    // Clear existing items
-    cartItemsList.innerHTML = '';
-
-    cart.forEach((item, index) => {
+    function renderCartItems() {
+      const cartItemsList = document.getElementById('checkout-items-list');
+      const cart = JSON.parse(localStorage.getItem('cart')) || [];
+      let subtotal = 0;
+  
+      if (!cartItemsList) return;
+  
+      cartItemsList.innerHTML = '';
+      cart.forEach((item, index) => {
         const itemElement = document.createElement('div');
         itemElement.className = 'w-commerce-commercecheckoutorderitem checkout-item';
-        
+  
         let itemDetails = '';
-        let itemPrice = 0;
-        
-        switch(item.type) {
-            case 'accommodation':
-                itemPrice = parseFloat(item.price) / 100; // Convert cents to dollars
-                itemDetails = `
-                    <div class="checkout-item-details">
-                        <h4>${item.name}</h4>
-                        <p>Check-in: ${item.details?.checkIn || 'N/A'}</p>
-                        <p>Check-out: ${item.details?.checkOut || 'N/A'}</p>
-                        <p>Guests: ${item.details?.guests || 1}</p>
-                        <p>Total: $${itemPrice.toFixed(2)}</p>
-                    </div>`;
-                break;
-                
-            case 'activity':
-                itemPrice = parseFloat(item.price) / 100;
-                itemDetails = `
-                    <div class="checkout-item-details">
-                        <h4>${item.name}</h4>
-                        <p>Participants: ${item.quantity}</p>
-                        <p>Total: $${itemPrice.toFixed(2)}</p>
-                    </div>`;
-                break;
-                
-            case 'sponsorship':
-                itemPrice = parseFloat(item.price) / 100;
-                itemDetails = `
-                    <div class="checkout-item-details">
-                        <h4>${item.name}</h4>
-                        <p>Total: $${itemPrice.toFixed(2)}</p>
-                    </div>`;
-                break;
-        }
-
-        itemElement.innerHTML = `
-            <div class="checkout-item-content">
-                <div class="checkout-item-image-wrapper">
-                    <img src="${item.image || 'images/placeholder.jpg'}" alt="${item.name}" class="checkout-item-image">
-                </div>
-                ${itemDetails}
+        let itemPrice = parseFloat(item.price) / 100;
+  
+        if (item.type === 'accommodation') {
+          itemDetails = `
+            <div class="checkout-item-details">
+                <h4>${item.name}</h4>
+                <p>Check-in: ${item.details?.checkIn || 'N/A'}</p>
+                <p>Check-out: ${item.details?.checkOut || 'N/A'}</p>
+                <p>Guests: ${item.details?.guests || 1}</p>
+                <p>Total: $${itemPrice.toFixed(2)}</p>
             </div>`;
-            
+        } else if (item.type === 'activity') {
+          itemDetails = `
+            <div class="checkout-item-details">
+                <h4>${item.name}</h4>
+                <p>Participants: ${item.quantity}</p>
+                <p>Total: $${itemPrice.toFixed(2)}</p>
+            </div>`;
+        } else if (item.type === 'sponsorship') {
+          itemDetails = `
+            <div class="checkout-item-details">
+                <h4>${item.name}</h4>
+                <p>Total: $${itemPrice.toFixed(2)}</p>
+            </div>`;
+        }
+  
+        itemElement.innerHTML = `
+          <div class="checkout-item-content">
+            <div class="checkout-item-image-wrapper">
+              <img src="${item.image || 'images/placeholder.jpg'}" alt="${item.name}" class="checkout-item-image">
+            </div>
+            ${itemDetails}
+          </div>`;
+  
         cartItemsList.appendChild(itemElement);
         subtotal += itemPrice;
-    });
-
-    // Update total display
-    const subtotalElement = document.querySelector('.w-commerce-commercecartordervalue');
-    if (subtotalElement) {
+      });
+  
+      const subtotalElement = document.querySelector('.w-commerce-commercecartordervalue');
+      if (subtotalElement) {
         subtotalElement.textContent = `$${subtotal.toFixed(2)}`;
+      }
     }
-  });
+  
+    Webflow.push(function () {
+      setTimeout(renderCartItems, 500);
+    });
   </script>
+  
 </body>
 </html>

@@ -475,13 +475,58 @@
   <script src="js/cart.js" type="text/javascript"></script>
   <script src="index.js" type="text/javascript"></script>
   <script>
+function addToCart(productId, productName, productPrice) {
+
+
+    const product = {
+        id: productId,
+        type: 'activity',
+        name: productName,
+        price: parseFloat(productPrice),
+        quantity: 1,
+        image: 'images/hotelimg9.jpg'
+        
+    };
+
+    let cart = JSON.parse(localStorage.getItem('cart')) || [];
+
+    const existingItem = cart.find(item => item.id === productId && item.type === 'activity');
+
+    if (existingItem) {
+        alert('This product is already in your cart');
+        return;
+    }
+
+    cart.push(product);
+    localStorage.setItem('cart', JSON.stringify(cart));
+
+    if (typeof updateCartDisplay === 'function') {
+        updateCartDisplay();
+    }
+
+    const addToCartBtn = document.getElementById(`add-to-cart-btn-${productId}`);
+    if (addToCartBtn) {
+        const originalText = addToCartBtn.textContent;
+        addToCartBtn.textContent = 'Added to Cart!';
+        addToCartBtn.disabled = true;
+
+        setTimeout(() => {
+            addToCartBtn.textContent = originalText;
+            addToCartBtn.disabled = false;
+        }, 2000);
+    } else {
+        alert(`${productName} added to cart`);
+    }
+}
+
+    
     function addToCartFromButton(buttonElement) {
       const productId = buttonElement.getAttribute('data-product-id');
       const productName = buttonElement.getAttribute('data-product-name');
       const productPriceString = buttonElement.getAttribute('data-product-price');
 
       // Basic validation
-      if (!productId || productId === 'UUID_PLACEHOLDER' || productId.startsWith('UUID_FOR_')) {
+      if (!productId || productId === 'UUID_PLACEHOLDER' || !productId.startsWith('UUID_FOR_')) {
           alert('Error: Product ID is missing or not configured for this item.');
           console.error('Missing or placeholder product ID on button:', buttonElement);
           return;
