@@ -4665,6 +4665,106 @@ blockquote {
   height: 440px;
 }
 
+.div-block-8-dinner {
+  background-image: url('../images/dinner-img.jpg');
+  background-position: 50% 0;
+  background-size: cover;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+  width: 100%;
+  height: 440px;
+}
+
+.div-block-9-hike {
+  background-image: url('../images/2-p-1080.jpg');
+  background-position: 50% 0;
+  background-size: cover;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+  width: 100%;
+  height: 440px;
+}
+
+.div-block-9-disc {
+  background-image: url('../images/discgolf-comp-p-1080.jpg');
+  background-position: 50% 0;
+  background-size: cover;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+  width: 100%;
+  height: 440px;
+}
+
+.div-block-9-spa {
+  background-image: url('../images/banffhotel-spaimg-p-1080.jpg');
+  background-position: 50% 0;
+  background-size: cover;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+  width: 100%;
+  height: 440px;
+}
+
+.div-block-9-horse2 {
+  background-image: url('../images/3-p-1080.jpg');
+  background-position: 50% 0;
+  background-size: cover;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+  width: 100%;
+  height: 440px;
+}
+
+.div-block-9-hiking {
+  background-image: url('../images/hikingimg-compressed2-p-1080.jpg');
+  background-position: 50% 0;
+  background-size: cover;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+  width: 100%;
+  height: 440px;
+}
+
+.div-block-9-bike {
+  background-image: url('../images/goatcreekimg-comp-p-800.jpg');
+  background-position: 50% 0;
+  background-size: cover;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px; 
+  width: 100%;
+  height: 440px;
+}
+
+.div-block-9-heli {
+  background-image: url('../images/heliride.jpg');
+  background-position: 50% 0;
+  background-size: cover;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px; 
+  width: 100%;
+  height: 440px;
+}
+
+.div-block-9-happyhour {
+  background-image: url('../images/happyhour.jpg');
+  background-position: 50% 0;
+  background-size: cover;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px; 
+  width: 100%;
+  height: 440px;
+}
+
+.div-block-9-poker {
+  background-image: url('../images/6-p-1080.jpg');
+  background-position: 50% 0;
+  background-size: cover;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px; 
+  width: 100%;
+  height: 440px;
+}
+
 .tabs {
   width: 100%;
 }
