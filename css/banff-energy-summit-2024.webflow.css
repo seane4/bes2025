@@ -1639,7 +1639,7 @@ blockquote {
 
 .container.activities-fix {
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .container.activities-fix.new {
@@ -2199,6 +2199,14 @@ blockquote {
   display: grid;
 }
 
+.support-wrapper.homeherosection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
 .support-wrapper.sponsorsgrid {
   grid-column-gap: 80px;
   grid-row-gap: 80px;
@@ -2260,11 +2268,13 @@ blockquote {
 }
 
 .support-square.first-square {
-  background-image: url('../images/grouppicbeers.jpg');
-  background-position: 0 15%;
+  background-image: url('../images/hikingimg-compressed2-p-1600.jpg');
   background-size: auto;
   max-width: 100%;
   margin-bottom: 10px;
+  background-repeat: no-repeat;
+  object-fit: contain;
+  background-position: center;
 }
 
 .support-square.first-square.infosquare1 {
@@ -3599,6 +3609,20 @@ blockquote {
   color: var(--tracts-blue);
 }
 
+.heading-3.herotitle {
+  text-align: center;
+}
+
+.herotitlesubtext {
+  text-align: center;
+  font-family: var(--body);
+  color: var(--dim-grey);
+  font-size: 20px;
+  max-width: 80%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .paragraph, .field-label-2, .field-label-3, .field-label-4 {
   font-family: var(--body);
   color: var(--tracts-blue);
@@ -3983,6 +4007,7 @@ blockquote {
 }
 
 .div-block-4.buttongrp {
+  padding-top: 20px;
   grid-column-gap: 12px;
   grid-row-gap: 12px;
 }
