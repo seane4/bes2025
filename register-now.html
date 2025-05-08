@@ -394,74 +394,51 @@
       <div class="support-top-wrapper">
         <div class="support-top-left">
           <h2 class="support-top-heading">Event Activities</h2>
-          <div class="support-top-details-text">Enhance your summit experience with our curated activities.</div>
+          <div class="support-top-details-text">Add activities below to your cart. Please be mindful of event times and dates based on our Agenda! We're excited to see you there!</div>
         </div>
       </div>
 
       <!-- Activities Grid -->
       <div class="activities-grid">
+
+
         <!-- Activity Card 1: Signature Pool & Spa -->
         <div class="activity-card" data-price="2500">
           <div class="activity-image">
-            <img src="images/banffhotel-spaimg.jpg" alt="Signature Pool & Spa">
+            <img src="images/3.jpg" alt="Horseback Riding">
           </div>
           <div class="activity-content">
-            <h3 class="activity-title">Signature Pool & Spa</h3>
-            <p class="activity-description">Unwind in our world-class spa facilities with mountain views. Package includes pool access and a spa treatment.</p>
+            <p class="activity-timetext">Day 2 | Events 1 & 5</p>
+            <p class="activity-timetext">Day 3 | Events 1 & 6</p>
+            <h3 class="activity-title">Horseback Riding</h3>
+            <p class="activity-description">Take in breathtaking views of Banff from the Horseback Riding. Includes summit access and dining credit.</p>
             <div class="activity-options">
-              
+
               <!-- Guest Selection -->
               <div class="selection-group">
-                <label for="spa-guest">Guest</label>
-                <select id="spa-guest" class="guest-select">
+                <label for="gondola-guest">Guest</label>
+                <select id="gondola-guest" class="guest-select">
                   <option value="single">For Me ($25)</option>
                   <option value="spouse">For Spouse ($25)</option>
                   <option value="both">For Both ($50)</option>
                 </select>
               </div>
               <button class="activity-add-btn btn"
-                  data-product-id="10269029-08ba-4623-a8b9-2fb4849626dd"
-                  data-product-name="Signature Pool and Spa"
+                  data-product-id="72252597-6bd9-485c-8a7b-06f244bb4f52"
+                  data-product-name="Horseback Riding"
                   data-product-price="2500"
                   onclick="addToCartFromButton(this)">Add to Cart</button>
             </div>
           </div>
         </div>
 
-        <!-- Activity Card 2: Golf Tournament -->
-        <div class="activity-card" data-price="2500">
-          <div class="activity-image">
-            <img src="images/banff-golfimgbackground.jpg" alt="BES2025 Golf Tournament">
-          </div>
-          <div class="activity-content">
-            <h3 class="activity-title">BES2025 Golf Tournament</h3>
-            <p class="activity-description">Join us for a round of golf at the scenic Banff Springs Golf Course. Includes equipment rental and lunch.</p>
-            <div class="activity-options">
-              
-              <!-- Guest Selection -->
-              <div class="selection-group">
-                <label for="golf-guest">Guest</label>
-                <select id="golf-guest" class="guest-select">
-                  <option value="single">For Me ($25)</option>
-                  <option value="spouse">For Spouse ($25)</option>
-                  <option value="both">For Both ($50)</option>
-                </select>
-              </div>
-              <button class="activity-add-btn btn"
-              data-product-id="81457d58-2340-4d32-b923-45ca1d21c7c8"
-              data-product-name="BES2025 Golf Tournament"
-              data-product-price="2500"
-              onclick="addToCartFromButton(this)">Add to Cart</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Activity Card 3: Mountain Hiking -->
+        <!-- Activity Card 2: Mountain Hiking -->
         <div class="activity-card" data-price="2500">
           <div class="activity-image">
             <img src="images/hikingimg-compressed2.jpg" alt="Guided Mountain Hiking">
           </div>
           <div class="activity-content">
+            <p class="activity-timetext">Day 2 & 3 | Event 2</p>
             <h3 class="activity-title">Guided Mountain Hiking</h3>
             <p class="activity-description">Experience a guided hiking tour through Banff's stunning mountain trails. Equipment and snacks provided.</p>
             <div class="activity-options">
@@ -484,12 +461,75 @@
           </div>
         </div>
 
-        <!-- Activity Card 4: Mountain Biking -->
+        <!-- Activity Card 3: Golf Tournament -->
+        <div class="activity-card" data-price="2500">
+          <div class="activity-image">
+            <img src="images/banff-golfimgbackground.jpg" alt="BES2025 Golf Tournament">
+          </div>
+          <div class="activity-content">
+            <p class="activity-timetext">Day 2 | Event 3 (All Day)</p>
+            <h3 class="activity-title">BES2025 Golf Tournament</h3>
+            <p class="activity-description">Join us for a round of golf at the scenic Banff Springs Golf Course. Includes equipment rental and lunch.</p>
+            <div class="activity-options">
+              
+              <!-- Guest Selection -->
+              <div class="selection-group">
+                <label for="golf-guest">Guest</label>
+                <select id="golf-guest" class="guest-select">
+                  <option value="single">For Me ($25)</option>
+                  <option value="spouse">For Spouse ($25)</option>
+                  <option value="both">For Both ($50)</option>
+                </select>
+              </div>
+              <button class="activity-add-btn btn"
+              data-product-id="81457d58-2340-4d32-b923-45ca1d21c7c8"
+              data-product-name="BES2025 Golf Tournament"
+              data-product-price="2500"
+              onclick="addToCartFromButton(this)">Add to Cart</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Activity Card 4: Signature Pool & Spa -->
+        <div class="activity-card" data-price="2500">
+          <div class="activity-image">
+            <img src="images/banffhotel-spaimg.jpg" alt="Signature Pool & Spa">
+          </div>
+          <div class="activity-content">
+            <p class="activity-timetext">Day 2 | Event 4</p>
+            <h3 class="activity-title">Signature Pool & Spa </h3>
+            <p class="activity-description">Unwind in our world-class spa facilities with mountain views. Package includes pool access and a spa treatment.</p>
+            <div class="activity-options">
+              
+              <!-- Guest Selection -->
+              <div class="selection-group">
+                <label for="spa-guest">Guest</label>
+                <select id="spa-guest" class="guest-select">
+                  <option value="single">For Me ($25)</option>
+                  <option value="spouse">For Spouse ($25)</option>
+                  <option value="both">For Both ($50)</option>
+                </select>
+              </div>
+              <button class="activity-add-btn btn"
+                  data-product-id="10269029-08ba-4623-a8b9-2fb4849626dd"
+                  data-product-name="Signature Pool and Spa"
+                  data-product-price="2500"
+                  onclick="addToCartFromButton(this)">Add to Cart</button>
+            </div>
+          </div>
+        </div>
+
+        
+
+        
+
+        <!-- Activity Card 5: Mountain Biking -->
         <div class="activity-card" data-price="2500">
           <div class="activity-image">
             <img src="images/bikingpic.jpg" alt="Mountain Biking Adventure">
           </div>
           <div class="activity-content">
+            <p class="activity-timetext">Day 2 | Event 7 & Day 3 | Event 5</p>
             <h3 class="activity-title">Mountain Biking Adventure</h3>
             <p class="activity-description">Explore Banff's trails on two wheels with our guided mountain biking tour. Includes bike rental and safety gear.</p>
             <div class="activity-options">
@@ -521,12 +561,13 @@
           </div>
         </div>
 
-        <!-- Activity Card 5: Evening Reception -->
+        <!-- Activity Card 6: Evening Reception -->
         <div class="activity-card" data-price="2500">
           <div class="activity-image">
             <img src="images\reduced-imgbes-p-800.jpg" alt="Evening Reception">
           </div>
           <div class="activity-content">
+            <p class="activity-timetext">Day 3 | Last Event</p>
             <h3 class="activity-title">Evening Reception</h3>
             <p class="activity-description">Join us for an elegant evening of networking, fine dining, and entertainment at the historic Banff Springs Hotel.</p>
             <div class="activity-options">
@@ -549,33 +590,7 @@
           </div>
         </div>
 
-        <!-- Activity Card 6: Horseback Riding -->
-        <div class="activity-card" data-price="2500">
-          <div class="activity-image">
-            <img src="images/3.jpg" alt="Horseback Riding">
-          </div>
-          <div class="activity-content">
-            <h3 class="activity-title">Horseback Riding</h3>
-            <p class="activity-description">Take in breathtaking views of Banff from the Horseback Riding. Includes summit access and dining credit.</p>
-            <div class="activity-options">
-
-              <!-- Guest Selection -->
-              <div class="selection-group">
-                <label for="gondola-guest">Guest</label>
-                <select id="gondola-guest" class="guest-select">
-                  <option value="single">For Me ($25)</option>
-                  <option value="spouse">For Spouse ($25)</option>
-                  <option value="both">For Both ($50)</option>
-                </select>
-              </div>
-              <button class="activity-add-btn btn"
-                  data-product-id="72252597-6bd9-485c-8a7b-06f244bb4f52"
-                  data-product-name="Horseback Riding"
-                  data-product-price="2500"
-                  onclick="addToCartFromButton(this)">Add to Cart</button>
-            </div>
-          </div>
-        </div>
+        
       </div>
     </div>
   </div>
