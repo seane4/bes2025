@@ -4765,6 +4765,36 @@ blockquote {
   height: 440px;
 }
 
+.div-block-9-golf {
+  background-image: url('../images/banff-golfimgbackground-p-1080.jpg');
+  background-position: 50% 0;
+  background-size: cover;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px; 
+  width: 100%;
+  height: 440px;
+}
+
+.div-block-9-finaldinner {
+  background-image: url('../images/reduced-imgbes-p-1080.jpg');
+  background-position: 50% 0;
+  background-size: cover;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px; 
+  width: 100%;
+  height: 440px;
+}
+
+.div-block-9-brunch {
+  background-image: url('../images/brunch1.jpg');
+  background-position: 50% 0;
+  background-size: cover;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px; 
+  width: 100%;
+  height: 440px;
+} 
+
 .tabs {
   width: 100%;
 }
